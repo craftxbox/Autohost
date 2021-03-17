@@ -3,36 +3,18 @@ const {RULES} = require("./rules");
 
 const commands = {
     sip: {
-        description: "Sip.",
         hostonly: false,
         handler: function (user, username, args, autohost) {
             autohost.ribbon.sendChatMessage(":serikasip:");
         }
     },
     help: {
-        description: "Shows this help message.",
         hostonly: false,
         handler: function (user, username, args, autohost) {
-            const cmdList = Object.keys(commands);
-            cmdList.sort();
-
-            autohost.ribbon.sendChatMessage("Available commands:");
-
-            let message = "";
-
-            cmdList.forEach(cmd => {
-                if (!commands[cmd].hostonly || user === autohost.host) {
-                    message += `!${cmd} - ${commands[cmd].description}\n`;
-                }
-            });
-
-            autohost.ribbon.sendChatMessage(message);
-
-            autohost.ribbon.sendChatMessage("Have feedback? Message ZUDO in game or Zudo#0800 on Discord. Please note that this bot is still under development and may contain bugs.");
+            autohost.ribbon.sendChatMessage("The list of commands is available at https://git.io/JmqEY\n\nHave feedback? Message ZUDO in game or Zudo#0800 on Discord.\n\nWant to add me to your own room? Add me as a friend and send a DM.\n\nPlease note that this bot is still under development and may contain bugs.");
         }
     },
     kick: {
-        description: "Kicks a player from the lobby.",
         hostonly: true,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1) {
@@ -41,7 +23,7 @@ const commands = {
             }
 
             if (!autohost.room.isHost) {
-                autohost.sendMessage(username, "Use !givehost before attempting to kick players.")
+                autohost.sendMessage(username, "Use !hostmode before attempting to kick players.")
                 return;
             }
 
@@ -61,7 +43,6 @@ const commands = {
         }
     },
     ban: {
-        description: "Bans a player from the lobby.",
         hostonly: true,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1) {
@@ -70,7 +51,7 @@ const commands = {
             }
 
             if (!autohost.room.isHost) {
-                autohost.sendMessage(username, "Use !givehost before attempting to ban players.")
+                autohost.sendMessage(username, "Use !hostmode before attempting to ban players.")
                 return;
             }
 
@@ -91,18 +72,17 @@ const commands = {
         }
     },
     start: {
-        description: "Starts the game.",
         hostonly: true,
         handler: function (user, username, args, autohost) {
             if (autohost.room.players.length < 2) {
                 autohost.sendMessage(username, "Not enough players to start.");
                 return;
             }
+            autohost.recheckPlayers();
             autohost.room.start();
         }
     },
     preset: {
-        description: "Selects a game preset.",
         hostonly: true,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1 || !presets.hasOwnProperty(args[0].toLowerCase())) {
@@ -117,7 +97,6 @@ const commands = {
         }
     },
     rules: {
-        description: "Shows the current game rules.",
         hostonly: false,
         handler: function (user, username, args, autohost) {
             autohost.sendMessage(username, "Current rules:\n\n" + Object.keys(autohost.rules).map(rule => {
@@ -126,7 +105,6 @@ const commands = {
         }
     },
     setrule: {
-        description: "Sets a game rule.",
         hostonly: true,
         handler: function (user, username, args, autohost) {
             if (args.length !== 2 || !RULES.hasOwnProperty(args[0].toLowerCase())) {
@@ -155,10 +133,10 @@ const commands = {
             autohost.rules[args[0].toLowerCase()] = newvalue;
 
             autohost.sendMessage(username, `Rule updated:\n\n${rule.description(newvalue)}`);
+            autohost.recheckPlayers();
         }
     },
     unset: {
-        description: "Unsets a game rule.",
         hostonly: true,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1 || !RULES.hasOwnProperty(args[0].toLowerCase())) {
@@ -173,34 +151,70 @@ const commands = {
             autohost.sendMessage(username, `Rule unset:\n\n${rule.description(rule.default)}`);
         }
     },
-    takehost: {
-        description: "Take host of the room.",
+    hostmode: {
         hostonly: true,
         handler: function (user, username, args, autohost) {
-            autohost.room.transferOwnership(user);
-            autohost.sendMessage(username, "You are now the room host. Change any settings you want, then do !givehost when you're done.");
+            if (autohost.room.isHost) {
+                autohost.room.transferOwnership(user).then(() => {
+                    autohost.sendMessage(username, "You are now the room host. Change any settings you want, then do !hostmode again when you're done.");
+                });
+            } else {
+                autohost.room.takeOwnership().then(() => {
+                    autohost.sendMessage(username, "OK, I'm the host again.");
+                });
+            }
         }
     },
-    givehost: {
-        description: "Return host to the bot.",
+    sethost: {
         hostonly: true,
         handler: function (user, username, args, autohost) {
-            autohost.room.takeOwnership();
-            autohost.sendMessage(username, "OK, I'm the host again.");
-        }
-    },
-    autostart: {
-        description: "Set the autostart timer.",
-        hostonly: true,
-        handler: function (user, username, args, autohost) {
-            if (args.length !== 1 || isNaN(parseInt(args[0]))) {
-                autohost.sendMessage(username, "Usage: !autostart <time in seconds> (0 to disable)");
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !sethost <username>");
                 return;
             }
 
-            autohost.autostart = parseInt(args[0]);
-            autohost.sendMessage(username, `Autostart timer set to ${autohost.autostart} seconds.`);
+            const newHost = autohost.getUserID(args[0]);
+
+            if (!newHost) {
+                autohost.sendMessage(username, "That player is not in this lobby.");
+                return;
+            }
+
+            if (!autohost.room.isHost) {
+                autohost.room.takeOwnership()
+            }
+
+            autohost.host = newHost;
+            autohost.sendMessage(username, `${args[0].toUpperCase()} is now the lobby host.`);
+        }
+    },
+    autostart: {
+        hostonly: true,
+        handler: function (user, username, args, autohost) {
+            if (args.length !== 1 || isNaN(parseInt(args[0]))) {
+                autohost.sendMessage(username, "Usage: !autostart <time in seconds>");
+                return;
+            }
+
+            const timer = parseInt(args[0]);
+
+            if (timer > 600) {
+                autohost.sendMessage(username, `Autostart timer cannot be longer than 10 minutes.`);
+            } else if (timer < 5) {
+                autohost.sendMessage(username, `Autostart timer cannot be shorter than 5 seconds.`);
+            } else {
+                autohost.sendMessage(username, `Autostart timer set to ${timer} seconds.`);
+                autohost.autostart = timer;
+            }
             autohost.checkAutostart();
+        }
+    },
+    cancelstart: {
+        hostonly: true,
+        handler: function (user, username, args, autohost) {
+            autohost.autostart = 0;
+            autohost.checkAutostart();
+            autohost.sendMessage(username, `Autostart cancelled.`);
         }
     }
 };

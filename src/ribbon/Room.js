@@ -42,7 +42,6 @@ class Room extends EventEmitter {
             this.emit("playersupdate");
         });
 
-
         this.ribbon.on("startmulti", () => {
             this.ingame = true;
         });
@@ -69,6 +68,10 @@ class Room extends EventEmitter {
             this.ribbon.once("gmupdate", update => {
                 resolve(update);
             });
+
+            setTimeout(() => {
+                reject();
+            }, 5000);
 
             this.ribbon.sendMessage({
                 command: "updateconfig",
@@ -101,13 +104,20 @@ class Room extends EventEmitter {
     }
 
     transferOwnership(player) {
-        this.isHost = false;
-        this.ribbon.sendMessage({command: "transferownership", data: player});
+        return new Promise((resolve, reject) => {
+            this.ribbon.once("gmupdate.host", () => {
+                resolve();
+            });
+            setTimeout(() => {
+                reject();
+            }, 5000);
+            this.ribbon.sendMessage({command: "transferownership", data: player});
+        });
     }
 
     takeOwnership() {
         return new Promise((resolve, reject) => {
-            this.ribbon.once("joinroom", settings => {
+            this.ribbon.once("gmupdate.host", () => {
                 resolve();
             });
             setTimeout(() => {

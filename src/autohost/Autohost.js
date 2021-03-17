@@ -6,12 +6,12 @@ const {checkAll} = require("./rules");
 
 class Autohost extends EventEmitter {
 
-    constructor(ribbon, host, isPrivate) {
+    constructor(ribbon, host, isPrivateOrRoomCode) {
         super();
 
         this.ribbon = ribbon;
         this.host = host;
-        this.isPrivate = !!isPrivate;
+        this.isPrivate = !!isPrivateOrRoomCode;
 
         this.playerData = new Map();
         this.usernamesToIds = new Map();
@@ -29,25 +29,61 @@ class Autohost extends EventEmitter {
 
         this.autostart = 0;
 
+        this.hostDidJoin = false;
+        this.didLoadUsers = false;
+
         this.ribbon.on("ready", () => {
+            if (typeof isPrivateOrRoomCode === "boolean") {
+                this.ribbon.createRoom(isPrivateOrRoomCode).then(room => {
+                    this.room = room;
+                    return api.getUser(host);
+                }).then(user => {
+                    if (user) {
+                        return this.room.setName(`${user.username.toUpperCase()}'s ${this.isPrivate ? "private " : ""}room`);
+                    } else {
+                        return this.room.setName("Custom room");
+                    }
+                }).then(() => {
+                    this.didLoadUsers = true;
+                    this.emit("created", this.room.id);
 
-            this.ribbon.createRoom(isPrivate).then(room => {
-                this.room = room;
-                return api.getUser(host);
-            }).then(user => {
-                if (user) {
-                    return this.room.setName(`${user.username.toUpperCase()}'s ${this.isPrivate ? "private " : ""}room`);
-                } else {
-                    return this.room.setName("Custom room");
-                }
-            }).then(() => {
-                this.emit("created", this.room.id);
+                    this.room.on("playersupdate", () => {
+                        if (this.someoneDidJoin && this.room.players.length === 0 && this.room.spectators.length === 1) {
+                            this.emit("end");
+                        } else {
+                            this.checkAutostart();
+                        }
+                    });
+                });
+            } else {
+                this.ribbon.joinRoom(isPrivateOrRoomCode).then(room => {
+                    this.room = room;
+                    this.emit("created", room.id);
 
-                this.room.on("playersupdate", () => {
-                    this.checkAutostart();
+                    room.takeOwnership();
+
+                    room.on("playersupdate", () => {
+                        if (this.someoneDidJoin && this.room.players.length === 0 && this.room.spectators.length === 1) {
+                            this.emit("end");
+                        } else {
+                            this.checkAutostart();
+                        }
+                    });
+                });
+            }
+        });
+
+        this.ribbon.on("gmupdate", update => {
+            if (this.didLoadUsers) return;
+
+            update.players.forEach(player => {
+                api.getUser(player._id).then(user => {
+                    this.playerData.set(player._id, user);
+                    this.usernamesToIds.set(user.username.toLowerCase(), player._id);
                 });
             });
 
+            this.didLoadUsers = true;
         });
 
         this.ribbon.on("gmupdate.join", join => {
@@ -63,6 +99,8 @@ class Autohost extends EventEmitter {
                 return;
             }
 
+            this.someoneDidJoin = true;
+
             api.getUser(join._id).then(user => {
                 this.playerData.set(user._id, user);
                 this.usernamesToIds.set(user.username.toLowerCase(), user._id);
@@ -73,7 +111,7 @@ class Autohost extends EventEmitter {
 - Use !setrule to change the rules for this room.
 - Use !preset to enable special rulesets.
 - Use !autostart to allow the room to start automatically.
-- Use !takehost to become the host, to adjust room settings.
+- Use !hostmode to become the host, to adjust room settings.
 - Need more? Use !help for a full list of commands. 
 
 When you're ready to start, type !start.`);
@@ -105,12 +143,9 @@ When you're ready to start, type !start.`);
         });
 
         this.ribbon.on("gmupdate.bracket", update => {
-            if (!this.room.isHost) return;
+            if (!this.room.isHost || this.host === update.uid || update.bracket === "spectator") return;
 
             const playerData = this.getPlayerData(update.uid);
-
-            if (update.bracket === "spectator") return;
-
             const ineligibleMessage = checkAll(this.rules, playerData);
 
             if (ineligibleMessage) {
@@ -147,7 +182,7 @@ When you're ready to start, type !start.`);
             if (commands.hasOwnProperty(command)) {
                 const commandObj = commands[command];
 
-                if (!host && commandObj.hostonly) {
+                if (!host && commandObj.hostonly && user !== "5e4979d4fad3ca55f6512458") { // todo: hard coded id
                     this.sendMessage(username, "Only the lobby host can use this command.");
                     return;
                 }
@@ -184,6 +219,19 @@ When you're ready to start, type !start.`);
         this.bannedUsers.delete(username.toLowerCase());
     }
 
+    recheckPlayers() {
+        this.room.players.forEach(player => {
+            const playerData = this.getPlayerData(player);
+            if (checkAll(this.rules, playerData)) {
+                if (this.room.ingame) {
+                    this.room.kickPlayer(player);
+                } else {
+                    this.room.switchPlayerBracket(player, "spectator");
+                }
+            }
+        });
+    }
+
     checkAutostart() {
         if (Date.now() - this.gameEndedAt < 5000 || this.room.ingame) return;
 
@@ -205,6 +253,7 @@ When you're ready to start, type !start.`);
         } else if (this.room.players.length >= 2 && !this.autostartTimer) {
             this.ribbon.sendChatMessage("Game starting in " + this.autostart + " seconds!");
             this.autostartTimer = setTimeout(() => {
+                this.recheckPlayers();
                 this.room.start();
                 this.autostartTimer = undefined;
             }, this.autostart * 1000);

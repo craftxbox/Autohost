@@ -215,17 +215,17 @@ class Ribbon extends EventEmitter {
         });
     }
 
-    // joinRoom(code) {
-    //     return new Promise((resolve, reject) => {
-    //         this.ribbon.once("joinroom", settings => {
-    //             resolve(new Room(this, settings));
-    //         });
-    //         setTimeout(() => {
-    //             reject();
-    //         }, 5000);
-    //         this.sendMessage({command: "joinroom", data: code});
-    //     });
-    // }
+    joinRoom(code) {
+        return new Promise((resolve, reject) => {
+            this.once("joinroom", settings => {
+                resolve(new Room(this, settings));
+            });
+            setTimeout(() => {
+                reject();
+            }, 5000);
+            this.sendMessage({command: "joinroom", data: code});
+        });
+    }
 
     socialInvite(player) {
         this.sendMessage({command: "social.invite", data: player});

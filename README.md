@@ -5,7 +5,6 @@ unauthorised bots. Ask osk for permission before connecting to TETR.IO with anyt
 
 **You will be banned from the game if you don't follow the rules. It's not my fault if that happens.**
 
----
 
 # Autohost for TETR.IO
 

@@ -18,4 +18,4 @@ Currently it's full of bugs. I know. I'll fix them at some point.
 The source code is here to allow you to contribute to development and (perhaps) to learn. It's **NOT** for making
 unauthorised bots. Ask osk for permission before connecting to tetr.io with anything other than the official client.
 
-**You will be banned if you don't follow the rules. It's not my fault if that happens.
+**You will be banned if you don't follow the rules. It's not my fault if that happens.**

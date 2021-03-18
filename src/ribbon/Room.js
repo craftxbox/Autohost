@@ -64,24 +64,14 @@ class Room extends EventEmitter {
     }
 
     setRoomConfig(data) {
-        return new Promise((resolve, reject) => {
-            this.ribbon.once("gmupdate", update => {
-                resolve(update);
-            });
-
-            setTimeout(() => {
-                reject();
-            }, 5000);
-
-            this.ribbon.sendMessage({
-                command: "updateconfig",
-                data
-            });
+        this.ribbon.sendMessage({
+            command: "updateconfig",
+            data
         });
     }
 
     setName(name) {
-        return this.setRoomConfig([
+        this.setRoomConfig([
             {
                 index: "meta.name",
                 value: name
@@ -104,27 +94,11 @@ class Room extends EventEmitter {
     }
 
     transferOwnership(player) {
-        return new Promise((resolve, reject) => {
-            this.ribbon.once("gmupdate.host", () => {
-                resolve();
-            });
-            setTimeout(() => {
-                reject();
-            }, 5000);
-            this.ribbon.sendMessage({command: "transferownership", data: player});
-        });
+        this.ribbon.sendMessage({command: "transferownership", data: player});
     }
 
     takeOwnership() {
-        return new Promise((resolve, reject) => {
-            this.ribbon.once("gmupdate.host", () => {
-                resolve();
-            });
-            setTimeout(() => {
-                reject();
-            }, 5000);
-            this.ribbon.sendMessage({command: "takeownership"});
-        });
+        this.ribbon.sendMessage({command: "takeownership"});
     }
 
     start() {

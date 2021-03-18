@@ -22,7 +22,7 @@ const commands = {
                 return;
             }
 
-            if (!autohost.room.isHost) {
+            if (!autohost.ribbon.room.isHost) {
                 autohost.sendMessage(username, "Use !hostmode before attempting to kick players.")
                 return;
             }
@@ -35,7 +35,7 @@ const commands = {
             }
 
             if (kickRecipient !== user) {
-                autohost.room.kickPlayer(kickRecipient);
+                autohost.ribbon.room.kickPlayer(kickRecipient);
                 autohost.sendMessage(username, `Kicked ${args[0].toUpperCase()}.`);
             } else {
                 autohost.sendMessage(username, "Why would you want to kick yourself?");
@@ -50,7 +50,7 @@ const commands = {
                 return;
             }
 
-            if (!autohost.room.isHost) {
+            if (!autohost.ribbon.room.isHost) {
                 autohost.sendMessage(username, "Use !hostmode before attempting to ban players.")
                 return;
             }
@@ -64,7 +64,7 @@ const commands = {
 
             if (banRecipient !== user) {
                 autohost.banPlayer(banRecipient, args[0]);
-                autohost.room.kickPlayer(banRecipient);
+                autohost.ribbon.room.kickPlayer(banRecipient);
                 autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}.`);
             } else {
                 autohost.sendMessage(username, "Why would you want to ban yourself?");
@@ -74,12 +74,12 @@ const commands = {
     start: {
         hostonly: true,
         handler: function (user, username, args, autohost) {
-            if (autohost.room.players.length < 2) {
+            if (autohost.ribbon.room.players.length < 2) {
                 autohost.sendMessage(username, "Not enough players to start.");
                 return;
             }
             autohost.recheckPlayers();
-            autohost.room.start();
+            autohost.ribbon.room.start();
         }
     },
     preset: {
@@ -90,10 +90,8 @@ const commands = {
                 return;
             }
 
-            autohost.room.setRoomConfig(presets[args[0].toLowerCase()]).then(update => {
-                autohost.sendMessage(username, `Switched to ${args[0].toUpperCase()} preset.`);
-                console.log(update.game.options, update.game.match);
-            });
+            autohost.ribbon.room.setRoomConfig(presets[args[0].toLowerCase()]);
+            autohost.sendMessage(username, `Switched to ${args[0].toUpperCase()} preset.`);
         }
     },
     rules: {
@@ -154,14 +152,12 @@ const commands = {
     hostmode: {
         hostonly: true,
         handler: function (user, username, args, autohost) {
-            if (autohost.room.isHost) {
-                autohost.room.transferOwnership(user).then(() => {
-                    autohost.sendMessage(username, "You are now the room host. Change any settings you want, then do !hostmode again when you're done.");
-                });
+            if (autohost.ribbon.room.isHost) {
+                autohost.ribbon.room.transferOwnership(user);
+                autohost.sendMessage(username, "You are now the room host. Change any settings you want, then do !hostmode again when you're done.");
             } else {
-                autohost.room.takeOwnership().then(() => {
-                    autohost.sendMessage(username, "OK, I'm the host again.");
-                });
+                autohost.ribbon.room.takeOwnership();
+                autohost.sendMessage(username, "OK, I'm the host again.");
             }
         }
     },
@@ -180,8 +176,8 @@ const commands = {
                 return;
             }
 
-            if (!autohost.room.isHost) {
-                autohost.room.takeOwnership()
+            if (!autohost.ribbon.room.isHost) {
+                autohost.ribbon.room.takeOwnership()
             }
 
             autohost.host = newHost;
@@ -215,6 +211,13 @@ const commands = {
             autohost.autostart = 0;
             autohost.checkAutostart();
             autohost.sendMessage(username, `Autostart cancelled.`);
+        }
+    },
+    shutdown: {
+        hostonly: true,
+        handler: function (user, username, args, autohost) {
+            autohost.ribbon.room.transferOwnership(user);
+            autohost.emit("stop");
         }
     }
 };

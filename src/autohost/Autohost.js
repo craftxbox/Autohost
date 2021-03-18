@@ -6,12 +6,10 @@ const {checkAll} = require("./rules");
 
 class Autohost extends EventEmitter {
 
-    constructor(ribbon, host, isPrivateOrRoomCode) {
+    constructor(ribbon, host, isPrivate) {
         super();
-
-        this.ribbon = ribbon;
         this.host = host;
-        this.isPrivate = !!isPrivateOrRoomCode;
+        this.isPrivate = !!isPrivate;
 
         this.playerData = new Map();
         this.usernamesToIds = new Map();
@@ -32,45 +30,30 @@ class Autohost extends EventEmitter {
         this.hostDidJoin = false;
         this.didLoadUsers = false;
 
+        this.ribbon = ribbon;
+
         this.ribbon.on("ready", () => {
-            if (typeof isPrivateOrRoomCode === "boolean") {
-                this.ribbon.createRoom(isPrivateOrRoomCode).then(room => {
-                    this.room = room;
-                    return api.getUser(host);
-                }).then(user => {
-                    if (user) {
-                        return this.room.setName(`${user.username.toUpperCase()}'s ${this.isPrivate ? "private " : ""}room`);
-                    } else {
-                        return this.room.setName("Custom room");
-                    }
-                }).then(() => {
-                    this.didLoadUsers = true;
-                    this.emit("created", this.room.id);
+            this.ribbon.createRoom(this.isPrivate);
+        });
 
-                    this.room.on("playersupdate", () => {
-                        if (this.someoneDidJoin && this.room.players.length === 0 && this.room.spectators.length === 1) {
-                            this.emit("end");
-                        } else {
-                            this.checkAutostart();
-                        }
-                    });
-                });
-            } else {
-                this.ribbon.joinRoom(isPrivateOrRoomCode).then(room => {
-                    this.room = room;
-                    this.emit("created", room.id);
+        this.ribbon.on("joinroom", () => {
+            this.ribbon.room.on("playersupdate", () => {
+                if (this.someoneDidJoin && this.ribbon.room.players.length === 0 && this.ribbon.room.spectators.length === 1) {
+                    this.emit("end");
+                } else {
+                    this.checkAutostart();
+                }
+            });
 
-                    room.takeOwnership();
+            api.getUser(this.host).then(user => {
+                if (user) {
+                    this.ribbon.room.setName(`${user.username.toUpperCase()}'s ${this.isPrivate ? "private " : ""}room`);
+                } else {
+                    this.ribbon.room.setName("Custom room");
+                }
+            });
 
-                    room.on("playersupdate", () => {
-                        if (this.someoneDidJoin && this.room.players.length === 0 && this.room.spectators.length === 1) {
-                            this.emit("end");
-                        } else {
-                            this.checkAutostart();
-                        }
-                    });
-                });
-            }
+            this.emit("created", this.ribbon.room);
         });
 
         this.ribbon.on("gmupdate", update => {
@@ -86,52 +69,6 @@ class Autohost extends EventEmitter {
             this.didLoadUsers = true;
         });
 
-        this.ribbon.on("gmupdate.join", join => {
-            if ([...this.bannedUsers.values()].indexOf(join._id) !== -1) {
-                if (!this.room.isHost) {
-                    this.room.takeOwnership();
-                    this.room.kickPlayer(join._id);
-                    this.room.transferOwnership(this.host);
-                    this.ribbon.sendChatMessage("Took host temporarily to remove a banned player.");
-                } else {
-                    this.room.kickPlayer(join._id);
-                }
-                return;
-            }
-
-            this.someoneDidJoin = true;
-
-            api.getUser(join._id).then(user => {
-                this.playerData.set(user._id, user);
-                this.usernamesToIds.set(user.username.toLowerCase(), user._id);
-
-                if (join._id === this.host) {
-                    this.ribbon.sendChatMessage(`Welcome to your room, ${join.username.toUpperCase()}!
-                    
-- Use !setrule to change the rules for this room.
-- Use !preset to enable special rulesets.
-- Use !autostart to allow the room to start automatically.
-- Use !hostmode to become the host, to adjust room settings.
-- Need more? Use !help for a full list of commands. 
-
-When you're ready to start, type !start.`);
-                } else {
-                    const ineligibleMessage = checkAll(this.rules, user);
-
-                    if (ineligibleMessage) {
-                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.`);
-                    } else {
-                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}.`);
-                        return;
-                    }
-
-                    if (this.room.isHost) {
-                        this.room.switchPlayerBracket(user._id, "spectator");
-                    }
-                }
-            });
-        });
-
         this.ribbon.on("gmupdate.leave", leave => {
             const profile = this.playerData.get(leave);
 
@@ -143,7 +80,7 @@ When you're ready to start, type !start.`);
         });
 
         this.ribbon.on("gmupdate.bracket", update => {
-            if (!this.room.isHost || this.host === update.uid || update.bracket === "spectator") return;
+            if (!this.ribbon.room.isHost || this.host === update.uid || update.bracket === "spectator") return;
 
             const playerData = this.getPlayerData(update.uid);
             const ineligibleMessage = checkAll(this.rules, playerData);
@@ -158,11 +95,11 @@ When you're ready to start, type !start.`);
                 } else if (warnings === 3) {
                     this.sendMessage(playerData.username, "Final warning: you will be kicked if you try to switch to players again.");
                 } else if (warnings === 4) {
-                    this.room.kickPlayer(update.uid);
+                    this.ribbon.room.kickPlayer(update.uid);
                     return;
                 }
 
-                this.room.switchPlayerBracket(update.uid, "spectator");
+                this.ribbon.room.switchPlayerBracket(update.uid, "spectator");
             }
         });
 
@@ -197,6 +134,52 @@ When you're ready to start, type !start.`);
                 this.checkAutostart();
             }, 10000);
         });
+
+        this.ribbon.on("gmupdate.join", join => {
+            if ([...this.bannedUsers.values()].indexOf(join._id) !== -1) {
+                if (!this.ribbon.room.isHost) {
+                    this.ribbon.room.takeOwnership();
+                    this.ribbon.room.kickPlayer(join._id);
+                    this.ribbon.room.transferOwnership(this.host);
+                    this.ribbon.sendChatMessage("Took host temporarily to remove a banned player.");
+                } else {
+                    this.ribbon.room.kickPlayer(join._id);
+                }
+                return;
+            }
+
+            this.someoneDidJoin = true;
+
+            api.getUser(join._id).then(user => {
+                this.playerData.set(user._id, user);
+                this.usernamesToIds.set(user.username.toLowerCase(), user._id);
+
+                if (join._id === this.host) {
+                    this.ribbon.sendChatMessage(`Welcome to your room, ${join.username.toUpperCase()}!
+                    
+- Use !setrule to change the rules for this room.
+- Use !preset to enable special rulesets.
+- Use !autostart to allow the room to start automatically.
+- Use !hostmode to become the host, to adjust room settings.
+- Need more? Use !help for a full list of commands. 
+
+When you're ready to start, type !start.`);
+                } else {
+                    const ineligibleMessage = checkAll(this.rules, user);
+
+                    if (ineligibleMessage) {
+                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.`);
+                    } else {
+                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}.`);
+                        return;
+                    }
+
+                    if (this.ribbon.room.isHost) {
+                        this.ribbon.room.switchPlayerBracket(user._id, "spectator");
+                    }
+                }
+            });
+        });
     }
 
     sendMessage(username, message) {
@@ -220,20 +203,20 @@ When you're ready to start, type !start.`);
     }
 
     recheckPlayers() {
-        this.room.players.forEach(player => {
+        this.ribbon.room.players.forEach(player => {
             const playerData = this.getPlayerData(player);
             if (checkAll(this.rules, playerData)) {
-                if (this.room.ingame) {
-                    this.room.kickPlayer(player);
+                if (this.ribbon.room.ingame) {
+                    this.ribbon.room.kickPlayer(player);
                 } else {
-                    this.room.switchPlayerBracket(player, "spectator");
+                    this.ribbon.room.switchPlayerBracket(player, "spectator");
                 }
             }
         });
     }
 
     checkAutostart() {
-        if (Date.now() - this.gameEndedAt < 5000 || this.room.ingame) return;
+        if (Date.now() - this.gameEndedAt < 5000 || this.ribbon.room.ingame) return;
 
         if (this.autostart === 0) {
             if (this.autostartTimer) {
@@ -246,15 +229,15 @@ When you're ready to start, type !start.`);
 
         if (this.ingame) return;
 
-        if (this.room.players.length < 2 && this.autostartTimer) {
+        if (this.ribbon.room.players.length < 2 && this.autostartTimer) {
             this.ribbon.sendChatMessage("Start cancelled - waiting for players...");
             clearTimeout(this.autostartTimer);
             this.autostartTimer = undefined;
-        } else if (this.room.players.length >= 2 && !this.autostartTimer) {
+        } else if (this.ribbon.room.players.length >= 2 && !this.autostartTimer) {
             this.ribbon.sendChatMessage("Game starting in " + this.autostart + " seconds!");
             this.autostartTimer = setTimeout(() => {
                 this.recheckPlayers();
-                this.room.start();
+                this.ribbon.room.start();
                 this.autostartTimer = undefined;
             }, this.autostart * 1000);
         }

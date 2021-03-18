@@ -3,7 +3,7 @@ const msgpack = require("msgpack-lite");
 const EventEmitter = require("events");
 const Room = require("./Room");
 
-const CLIENT_VERSION = {"id":"d16ac3c","time":1615923726000};
+const CLIENT_VERSION = {"id": "d16ac3c", "time": 1615923726000};
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
 const RIBBON_PREFIXES = {
@@ -79,6 +79,8 @@ class Ribbon extends EventEmitter {
         this.dead = false;
         this.open = false;
 
+        this.room = undefined;
+
         this.sendQueue = [];
         this.lastSent = 0;
 
@@ -90,6 +92,8 @@ class Ribbon extends EventEmitter {
             this.ws.close();
         }
 
+        this.log("Connecting to " + endpoint);
+
         this.ws = new WebSocket(endpoint);
 
         this.ws.on("message", data => {
@@ -98,9 +102,16 @@ class Ribbon extends EventEmitter {
         });
 
         this.ws.on("open", () => {
+            this.log("WebSocket open");
+
             this.open = true;
             if (this.resume_token) {
-                this.sendMessageImmediate({command: "resume", socketid: this.socket_id, resumetoken: this.resume_token})
+                this.sendMessageImmediate({
+                    command: "resume",
+                    socketid: this.socket_id,
+                    resumetoken: this.resume_token
+                });
+                this.sendMessageImmediate({command: "hello", packets: this.sendQueue});
             } else {
                 this.sendMessageImmediate({command: "new"});
             }
@@ -111,12 +122,38 @@ class Ribbon extends EventEmitter {
         });
 
         this.ws.on("close", () => {
+            this.log("WebSocket closed");
+            this.ws.removeAllListeners();
             this.open = false;
             clearInterval(this.pingInterval);
+
+            if (!this.dead) {
+                setTimeout(() => {
+                    this.connect(RIBBON_ENDPOINT);
+                }, 5000);
+            }
+        });
+
+        this.ws.on("error", () => {
+            this.log("WebSocket errored");
+            this.ws.removeAllListeners();
+            this.open = false;
+            this.ws.close();
+
+            if (!this.dead) {
+                setTimeout(() => {
+                    this.connect(RIBBON_ENDPOINT);
+                }, 5000);
+            }
         });
     }
 
+    log(message) {
+        console.log(`[${this.socket_id || "new ribbon"}] ${message}`);
+    }
+
     sendMessageImmediate(message) {
+        this.log("OUT " + message.command);
         this.ws.send(ribbonEncode(message));
     }
 
@@ -132,10 +169,13 @@ class Ribbon extends EventEmitter {
     }
 
     die() {
+        this.dead = true;
+
         if (this.ws) {
             this.ws.close();
         }
-        this.dead = true;
+
+        this.emit("dead");
     }
 
     disconnectGracefully() {
@@ -149,11 +189,20 @@ class Ribbon extends EventEmitter {
     }
 
     handleMessageInternal(message) {
-        console.log(message); // todo: remove - please stop judging my code
+        if (message.command !== "pong") {
+            this.log("IN " + message.command);
+        }
+
         switch (message.command) {
             case "kick":
+                this.ws.close();
+                break;
             case "nope":
+                this.log("Ribbon noped out! " + JSON.stringify(message));
                 this.die();
+                break;
+            case "err":
+                this.log("Error! " + JSON.stringify(message));
                 break;
             case "hello":
                 this.socket_id = message.id;
@@ -161,7 +210,7 @@ class Ribbon extends EventEmitter {
 
                 this.sendMessageImmediate({ // auth the client
                     command: "authorize",
-                    id: 0,
+                    id: this.lastSent,
                     data: {
                         token: this.token,
                         handling: {
@@ -198,33 +247,19 @@ class Ribbon extends EventEmitter {
     }
 
     handleMessage(message) {
+        if (message.command === "joinroom") {
+            this.room = new Room(this, {id: message.data});
+        }
+
         this.emit(message.command, message.data);
     }
 
     createRoom(isPrivate) {
-        return new Promise((resolve, reject) => {
-            this.once("gmupdate", room => {
-                resolve(new Room(this, room));
-            });
-
-            setTimeout(() => {
-                reject();
-            }, 5000);
-
-            this.sendMessage({command: "createroom", data: isPrivate ? "private" : "public"});
-        });
+        this.sendMessage({command: "createroom", data: isPrivate ? "private" : "public"});
     }
 
     joinRoom(code) {
-        return new Promise((resolve, reject) => {
-            this.once("joinroom", settings => {
-                resolve(new Room(this, settings));
-            });
-            setTimeout(() => {
-                reject();
-            }, 5000);
-            this.sendMessage({command: "joinroom", data: code});
-        });
+        this.sendMessage({command: "joinroom", data: code});
     }
 
     socialInvite(player) {

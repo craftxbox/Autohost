@@ -69,7 +69,7 @@ const RULES = {
         type: Number,
         default: 0,
         check(value, user) {
-            return value !== 0 && xpToLevel(user.playerData.xp) < value;
+            return value !== 0 && xpToLevel(user.xp) < value;
         },
         message(value) {
             return `Your level is too low for this room (minimum is ${value})`

@@ -41,6 +41,7 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |Command|Arguments|Description|
 |---|---|---|
 |!help| |Shows the help message.|
+|!host| |Shows who the current host is.|
 |!rules| |Shows the current participation rules.|
 |!sip| |:serikasip:|
 

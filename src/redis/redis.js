@@ -48,4 +48,25 @@ function getAllLobbies() {
     });
 }
 
-module.exports = {getLobby, setLobby, deleteLobby, getAllLobbies};
+function getMOTD() {
+    return new Promise(resolve => {
+        client.get("motd", (err, res) => {
+            if (err) {
+                resolve(undefined);
+            } else {
+                resolve(res);
+            }
+        })
+    });
+}
+
+function setMOTD(motd) {
+    return new Promise((resolve, reject) => {
+        client.set("motd", motd, err => {
+            if (err) return reject(err);
+            resolve();
+        })
+    });
+}
+
+module.exports = {getLobby, setLobby, deleteLobby, getAllLobbies, getMOTD, setMOTD};

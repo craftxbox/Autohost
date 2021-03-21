@@ -135,7 +135,7 @@ redis.getAllLobbies().then(lobbies => {
 
     lobbies.forEach(lobby => {
         console.log(lobby);
-        if (!lobby.roomID || !lobby.host || !lobby.isPrivate) {
+        if (!lobby.roomID || !lobby.host) {
             console.log("Lobby skipped - missing critical data");
             return;
         }
@@ -156,7 +156,7 @@ redis.getAllLobbies().then(lobbies => {
 
             const ah = new Autohost(ribbon, undefined, lobby.isPrivate);
 
-            ribbon.sendChatMessage("I've recovered from a connection error.");
+            ribbon.sendChatMessage("Room settings have been restored.");
 
             applyRoomEvents(ah, ribbon, lobby.host);
             deserialise(lobby, ah);

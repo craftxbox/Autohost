@@ -4,6 +4,7 @@ const Autohost = require("./autohost/Autohost");
 const path = require("path");
 const api = require("./gameapi/api");
 const redis = require("./redis/redis");
+const {isDeveloper} = require("./data/developers");
 const {serialise, deserialise} = require("./redis/serialiser");
 
 require("dotenv").config({path: path.join(__dirname, "../.env")});
@@ -124,7 +125,7 @@ botMain.on("social.dm", message => {
         createLobby(user, true);
     } else if (msg === "!public") {
         createLobby(user, false);
-    } else if (msg.startsWith("!motd")) {
+    } else if (msg.startsWith("!motd") && isDeveloper(user)) {
         const args = msg.split(" ");
         args.shift();
         if (args.length === 0) {

@@ -220,7 +220,7 @@ When you're ready to start, type !start.`);
     }
 
     recheckPlayers() {
-        this.ribbon.room.players.forEach(async player => {
+        return Promise.all(this.ribbon.room.players.map(async player => {
             const playerData = await this.getPlayerData(player);
             if (checkAll(this.rules, playerData)) {
                 if (this.ribbon.room.ingame) {
@@ -229,7 +229,7 @@ When you're ready to start, type !start.`);
                     this.ribbon.room.switchPlayerBracket(player, "spectator");
                 }
             }
-        });
+        }));
     }
 
     checkAutostart() {
@@ -253,9 +253,10 @@ When you're ready to start, type !start.`);
         } else if (this.ribbon.room.players.length >= 2 && !this.autostartTimer) {
             this.ribbon.sendChatMessage("Game starting in " + this.autostart + " seconds!");
             this.autostartTimer = setTimeout(() => {
-                this.recheckPlayers();
-                this.ribbon.room.start();
-                this.autostartTimer = undefined;
+                this.recheckPlayers().then(() => {
+                    this.ribbon.room.start();
+                    this.autostartTimer = undefined;
+                });
             }, this.autostart * 1000);
         }
     }

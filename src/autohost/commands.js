@@ -121,8 +121,9 @@ const commands = {
                 autohost.sendMessage(username, "Not enough players to start.");
                 return;
             }
-            autohost.recheckPlayers();
-            autohost.ribbon.room.start();
+            autohost.recheckPlayers().then(() => {
+                autohost.ribbon.room.start();
+            });
         }
     },
     preset: {

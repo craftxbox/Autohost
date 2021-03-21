@@ -8,8 +8,14 @@ class Autohost extends EventEmitter {
 
     constructor(ribbon, host, isPrivate) {
         super();
+
+        if (!ribbon.room) {
+            throw new Error("Ribbon should be connected to a lobby!");
+        }
+
+        this.isPrivate = isPrivate;
+
         this.host = host;
-        this.isPrivate = !!isPrivate;
 
         this.playerData = new Map();
         this.usernamesToIds = new Map();
@@ -32,42 +38,16 @@ class Autohost extends EventEmitter {
 
         this.ribbon = ribbon;
 
-        this.ribbon.on("ready", () => {
-            this.ribbon.createRoom(this.isPrivate);
+        this.roomID = ribbon.room.id;
+
+        this.ribbon.room.on("playersupdate", () => {
+            if (this.someoneDidJoin && this.ribbon.room.players.length === 0 && this.ribbon.room.spectators.length === 1) {
+                this.emit("end");
+            } else {
+                this.checkAutostart();
+            }
         });
 
-        this.ribbon.on("joinroom", () => {
-            this.ribbon.room.on("playersupdate", () => {
-                if (this.someoneDidJoin && this.ribbon.room.players.length === 0 && this.ribbon.room.spectators.length === 1) {
-                    this.emit("end");
-                } else {
-                    this.checkAutostart();
-                }
-            });
-
-            api.getUser(this.host).then(user => {
-                if (user) {
-                    this.ribbon.room.setName(`${user.username.toUpperCase()}'s ${this.isPrivate ? "private " : ""}room`);
-                } else {
-                    this.ribbon.room.setName("Custom room");
-                }
-            });
-
-            this.emit("created", this.ribbon.room);
-        });
-
-        this.ribbon.on("gmupdate", update => {
-            if (this.didLoadUsers) return;
-
-            update.players.forEach(player => {
-                api.getUser(player._id).then(user => {
-                    this.playerData.set(player._id, user);
-                    this.usernamesToIds.set(user.username.toLowerCase(), player._id);
-                });
-            });
-
-            this.didLoadUsers = true;
-        });
 
         this.ribbon.on("gmupdate.leave", leave => {
             const profile = this.playerData.get(leave);
@@ -79,10 +59,10 @@ class Autohost extends EventEmitter {
             }
         });
 
-        this.ribbon.on("gmupdate.bracket", update => {
+        this.ribbon.on("gmupdate.bracket", async update => {
             if (!this.ribbon.room.isHost || this.host === update.uid || update.bracket === "spectator") return;
 
-            const playerData = this.getPlayerData(update.uid);
+            const playerData = await this.getPlayerData(update.uid);
             const ineligibleMessage = checkAll(this.rules, playerData);
 
             if (ineligibleMessage) {
@@ -186,12 +166,25 @@ When you're ready to start, type !start.`);
         this.ribbon.sendChatMessage(`[${username.toUpperCase()}] -> ${message}`);
     }
 
-    getUserID(username) {
-        return this.usernamesToIds.get(username.toLowerCase());
+    async getUserID(username) {
+        if (this.usernamesToIds.has(username.toLowerCase())) {
+            return this.usernamesToIds.get(username.toLowerCase());
+        } else {
+            return undefined; // we can't get this yet
+        }
     }
 
-    getPlayerData(player) {
-        return this.playerData.get(player);
+    async getPlayerData(player) {
+        if (this.playerData.has(player)) {
+            return this.playerData.get(player);
+        } else {
+            const data = await api.getUser(player);
+            if (data) {
+                this.playerData.set(player, data);
+                this.usernamesToIds.set(data.username.toLowerCase(), player);
+            }
+            return data;
+        }
     }
 
     banPlayer(user, username) {
@@ -203,8 +196,8 @@ When you're ready to start, type !start.`);
     }
 
     recheckPlayers() {
-        this.ribbon.room.players.forEach(player => {
-            const playerData = this.getPlayerData(player);
+        this.ribbon.room.players.forEach(async player => {
+            const playerData = await this.getPlayerData(player);
             if (checkAll(this.rules, playerData)) {
                 if (this.ribbon.room.ingame) {
                     this.ribbon.room.kickPlayer(player);

@@ -81,6 +81,10 @@ class Ribbon extends EventEmitter {
 
         this.room = undefined;
 
+        this.migrating = false;
+
+        this.sendHistory = [];
+
         this.sendQueue = [];
         this.lastSent = 0;
 
@@ -89,6 +93,7 @@ class Ribbon extends EventEmitter {
 
     connect(endpoint) {
         if (this.ws) { // switching endpoints?
+            this.migrating = true;
             this.ws.close();
         }
 
@@ -111,7 +116,8 @@ class Ribbon extends EventEmitter {
                     socketid: this.socket_id,
                     resumetoken: this.resume_token
                 });
-                this.sendMessageImmediate({command: "hello", packets: this.sendQueue});
+                this.sendMessageImmediate({command: "hello", packets: this.sendHistory});
+                this.migrating = false;
             } else {
                 this.sendMessageImmediate({command: "new"});
             }
@@ -122,6 +128,10 @@ class Ribbon extends EventEmitter {
         });
 
         this.ws.on("close", () => {
+            if (this.migrating) {
+                return;
+            }
+
             this.log("WebSocket closed");
             this.ws.removeAllListeners();
             this.open = false;
@@ -155,6 +165,11 @@ class Ribbon extends EventEmitter {
     sendMessageImmediate(message) {
         this.log("OUT " + message.command);
         this.ws.send(ribbonEncode(message));
+        this.sendHistory.push(message);
+
+        if (this.sendHistory.length > 500) {
+            this.sendHistory.splice(0, this.sendHistory.length - 500);
+        }
     }
 
     flushQueue() {
@@ -184,6 +199,7 @@ class Ribbon extends EventEmitter {
     }
 
     sendMessage(message) {
+        this.log("PUSH " + message.command);
         this.sendQueue.push(message);
         this.flushQueue();
     }
@@ -195,14 +211,12 @@ class Ribbon extends EventEmitter {
 
         switch (message.command) {
             case "kick":
+                this.log("Ribbon kicked! " + JSON.stringify(message));
                 this.ws.close();
                 break;
             case "nope":
                 this.log("Ribbon noped out! " + JSON.stringify(message));
                 this.die();
-                break;
-            case "err":
-                this.log("Error! " + JSON.stringify(message));
                 break;
             case "hello":
                 this.socket_id = message.id;

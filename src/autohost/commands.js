@@ -16,7 +16,7 @@ const commands = {
     },
     kick: {
         hostonly: true,
-        handler: function (user, username, args, autohost) {
+        handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !kick <username>");
                 return;
@@ -27,7 +27,7 @@ const commands = {
                 return;
             }
 
-            const kickRecipient = autohost.getUserID(args[0]);
+            const kickRecipient = await autohost.getUserID(args[0]);
 
             if (!kickRecipient) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
@@ -44,7 +44,7 @@ const commands = {
     },
     ban: {
         hostonly: true,
-        handler: function (user, username, args, autohost) {
+        handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !ban <username>");
                 return;
@@ -55,7 +55,7 @@ const commands = {
                 return;
             }
 
-            const banRecipient = autohost.getUserID(args[0]);
+            const banRecipient = await autohost.getUserID(args[0]);
 
             if (!banRecipient) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
@@ -69,6 +69,8 @@ const commands = {
             } else {
                 autohost.sendMessage(username, "Why would you want to ban yourself?");
             }
+
+            autohost.emit("configchange");
         }
     },
     start: {
@@ -132,6 +134,8 @@ const commands = {
 
             autohost.sendMessage(username, `Rule updated:\n\n${rule.description(newvalue)}`);
             autohost.recheckPlayers();
+
+            autohost.emit("configchange");
         }
     },
     unset: {
@@ -147,6 +151,8 @@ const commands = {
             autohost.rules[args[0].toLowerCase()] = rule.default;
 
             autohost.sendMessage(username, `Rule unset:\n\n${rule.description(rule.default)}`);
+
+            autohost.emit("configchange");
         }
     },
     hostmode: {
@@ -163,13 +169,13 @@ const commands = {
     },
     sethost: {
         hostonly: true,
-        handler: function (user, username, args, autohost) {
+        handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !sethost <username>");
                 return;
             }
 
-            const newHost = autohost.getUserID(args[0]);
+            const newHost = await autohost.getUserID(args[0]);
 
             if (!newHost) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
@@ -182,6 +188,8 @@ const commands = {
 
             autohost.host = newHost;
             autohost.sendMessage(username, `${args[0].toUpperCase()} is now the lobby host.`);
+
+            autohost.emit("configchange");
         }
     },
     autostart: {
@@ -203,6 +211,8 @@ const commands = {
                 autohost.autostart = timer;
             }
             autohost.checkAutostart();
+
+            autohost.emit("configchange");
         }
     },
     cancelstart: {
@@ -211,6 +221,8 @@ const commands = {
             autohost.autostart = 0;
             autohost.checkAutostart();
             autohost.sendMessage(username, `Autostart cancelled.`);
+
+            autohost.emit("configchange");
         }
     },
     shutdown: {

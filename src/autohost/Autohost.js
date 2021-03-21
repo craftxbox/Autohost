@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 const api = require("../gameapi/api");
 
 const commands = require("./commands");
+const {isDeveloper} = require("../data/developers");
 const {checkAll} = require("./rules");
 
 class Autohost extends EventEmitter {
@@ -13,13 +14,14 @@ class Autohost extends EventEmitter {
             throw new Error("Ribbon should be connected to a lobby!");
         }
 
+        this.persist = false;
         this.isPrivate = isPrivate;
-
         this.host = host;
 
         this.playerData = new Map();
         this.usernamesToIds = new Map();
         this.bannedUsers = new Map();
+        this.moderatorUsers = new Map();
 
         this.warnings = {};
 
@@ -42,7 +44,9 @@ class Autohost extends EventEmitter {
 
         this.ribbon.room.on("playersupdate", () => {
             if (this.someoneDidJoin && this.ribbon.room.players.length === 0 && this.ribbon.room.spectators.length === 1) {
-                this.emit("end");
+                if (!this.persist) {
+                    this.emit("end");
+                }
             } else {
                 this.checkAutostart();
             }
@@ -90,6 +94,8 @@ class Autohost extends EventEmitter {
             const user = chat.user._id;
             const message = chat.content;
             const host = user === this.host;
+            const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
+            const dev = isDeveloper(user)
 
             if (!message.startsWith("!")) return; // ignore not commands
 
@@ -99,8 +105,18 @@ class Autohost extends EventEmitter {
             if (commands.hasOwnProperty(command)) {
                 const commandObj = commands[command];
 
-                if (!host && commandObj.hostonly && user !== "5e4979d4fad3ca55f6512458") { // todo: hard coded id
+                if (!dev && commandObj.devonly) {
+                    this.sendMessage(username, "This command is only available for developers.");
+                    return;
+                }
+
+                if (!host && !dev && commandObj.hostonly) {
                     this.sendMessage(username, "Only the lobby host can use this command.");
+                    return;
+                }
+
+                if (!host && !mod && !dev && commandObj.modonly) {
+                    this.sendMessage(username, "Only the lobby moderators can use this command.");
                     return;
                 }
 
@@ -193,6 +209,14 @@ When you're ready to start, type !start.`);
 
     unbanPlayer(username) {
         this.bannedUsers.delete(username.toLowerCase());
+    }
+
+    modPlayer(user, username) {
+        this.moderatorUsers.set(username.toLowerCase(), user);
+    }
+
+    unmodPlayer(username) {
+        this.moderatorUsers.delete(username.toLowerCase());
     }
 
     recheckPlayers() {

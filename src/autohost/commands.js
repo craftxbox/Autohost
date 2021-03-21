@@ -1,21 +1,28 @@
 const presets = require("../data/presets.js");
+const {isDeveloper} = require("../data/developers");
 const {RULES} = require("./rules");
 
 const commands = {
     sip: {
         hostonly: false,
+        modonly: false,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.ribbon.sendChatMessage(":serikasip:");
         }
     },
     help: {
         hostonly: false,
+        modonly: false,
+        devonly: false,
         handler: function (user, username, args, autohost) {
-            autohost.ribbon.sendChatMessage("The list of commands is available at https://git.io/JmqEY\n\nHave feedback? Message ZUDO in game or Zudo#0800 on Discord.\n\nWant to add me to your own room? Add me as a friend and send a DM.\n\nPlease note that this bot is still under development and may contain bugs.");
+            autohost.ribbon.sendChatMessage("Visit the GitHub page for detailed help, or if you wish to report an issue: https://git.io/JmqEY\n\nWant to add me to your own room? Add me as a friend and send a DM.\n\nPlease note that this bot is still under development and may contain bugs.");
         }
     },
     kick: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !kick <username>");
@@ -34,6 +41,21 @@ const commands = {
                 return;
             }
 
+            if (isDeveloper(kickRecipient)) {
+                autohost.sendMessage(username, "Please don't kick the developer! They'll leave if you ask nicely...");
+                return;
+            }
+
+            if (kickRecipient === autohost.host) {
+                autohost.sendMessage(username, "You can't kick the room host.");
+                return;
+            }
+
+            if ([...autohost.moderatorUsers.values()].indexOf(kickRecipient) !== -1 && user !== autohost.host && !isDeveloper(user)) {
+                autohost.sendMessage(username, "Only the room host can kick moderators.");
+                return;
+            }
+
             if (kickRecipient !== user) {
                 autohost.ribbon.room.kickPlayer(kickRecipient);
                 autohost.sendMessage(username, `Kicked ${args[0].toUpperCase()}.`);
@@ -43,7 +65,9 @@ const commands = {
         }
     },
     ban: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !ban <username>");
@@ -62,6 +86,21 @@ const commands = {
                 return;
             }
 
+            if (isDeveloper(banRecipient)) {
+                autohost.sendMessage(username, "Please don't ban the developer! They'll leave if you ask nicely...");
+                return;
+            }
+
+            if (banRecipient === autohost.host) {
+                autohost.sendMessage(username, "You can't ban the room host.");
+                return;
+            }
+
+            if ([...autohost.moderatorUsers.values()].indexOf(banRecipient) !== -1 && user !== autohost.host && !isDeveloper(user)) {
+                autohost.sendMessage(username, "Only the room host can ban moderators.");
+                return;
+            }
+
             if (banRecipient !== user) {
                 autohost.banPlayer(banRecipient, args[0]);
                 autohost.ribbon.room.kickPlayer(banRecipient);
@@ -74,7 +113,9 @@ const commands = {
         }
     },
     start: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             if (autohost.ribbon.room.players.length < 2) {
                 autohost.sendMessage(username, "Not enough players to start.");
@@ -85,7 +126,9 @@ const commands = {
         }
     },
     preset: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1 || !presets.hasOwnProperty(args[0].toLowerCase())) {
                 autohost.sendMessage(username, `Usage: !preset <${Object.keys(presets).join("|")}>`);
@@ -98,6 +141,8 @@ const commands = {
     },
     rules: {
         hostonly: false,
+        modonly: false,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.sendMessage(username, "Current rules:\n\n" + Object.keys(autohost.rules).map(rule => {
                 return RULES[rule].description(autohost.rules[rule])
@@ -105,7 +150,9 @@ const commands = {
         }
     },
     setrule: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             if (args.length !== 2 || !RULES.hasOwnProperty(args[0].toLowerCase())) {
                 autohost.sendMessage(username, `Usage:\n\n!setrule <rule> <value>\n\nWhere <rule> is one of:\n${Object.keys(RULES).join(", ")}`);
@@ -139,7 +186,9 @@ const commands = {
         }
     },
     unset: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1 || !RULES.hasOwnProperty(args[0].toLowerCase())) {
                 autohost.sendMessage(username, `Usage: !unset <rule>\n\nWhere <rule> is one of:\n\n${Object.keys(RULES).join(", ")}`);
@@ -157,6 +206,8 @@ const commands = {
     },
     hostmode: {
         hostonly: true,
+        modonly: false,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             if (autohost.ribbon.room.isHost) {
                 autohost.ribbon.room.transferOwnership(user);
@@ -169,6 +220,8 @@ const commands = {
     },
     sethost: {
         hostonly: true,
+        modonly: false,
+        devonly: false,
         handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !sethost <username>");
@@ -193,7 +246,9 @@ const commands = {
         }
     },
     autostart: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             if (args.length !== 1 || isNaN(parseInt(args[0]))) {
                 autohost.sendMessage(username, "Usage: !autostart <time in seconds>");
@@ -216,7 +271,9 @@ const commands = {
         }
     },
     cancelstart: {
-        hostonly: true,
+        hostonly: false,
+        modonly: true,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.autostart = 0;
             autohost.checkAutostart();
@@ -227,9 +284,84 @@ const commands = {
     },
     shutdown: {
         hostonly: true,
+        modonly: false,
+        devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.ribbon.room.transferOwnership(user);
             autohost.emit("stop");
+        }
+    },
+    persist: {
+        hostonly: false,
+        modonly: false,
+        devonly: true,
+        handler: function (user, username, args, autohost) {
+            if (autohost.persist) {
+                autohost.persist = false;
+                autohost.sendMessage(username, "Lobby will no longer persist.");
+            } else {
+                autohost.persist = true;
+                autohost.sendMessage(username, "Lobby will persist even if all players leave.");
+            }
+        }
+    },
+    unban: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !unban <username>");
+                return;
+            }
+
+            autohost.unbanPlayer(args[0]);
+
+            autohost.sendMessage(username, `Unbanned player ${args[0].toUpperCase()}.`);
+
+            autohost.emit("configchange");
+        }
+    },
+    mod: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !mod <username>");
+                return;
+            }
+
+            const modRecipient = await autohost.getUserID(args[0]);
+
+            if (!modRecipient) {
+                autohost.sendMessage(username, "That player is not in this lobby.");
+                return;
+            }
+
+            if (modRecipient !== user) {
+                autohost.modPlayer(modRecipient, args[0]);
+                autohost.sendMessage(username, `${args[0].toUpperCase()} is now a moderator.`);
+            }
+
+            autohost.emit("configchange");
+        }
+    },
+    unmod: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !unmod <username>");
+                return;
+            }
+
+            autohost.unmodPlayer(args[0]);
+
+            autohost.sendMessage(username, `${args[0].toUpperCase()} is no longer a moderator.`);
+
+            autohost.emit("configchange");
         }
     }
 };

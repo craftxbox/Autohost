@@ -1,4 +1,5 @@
 const presets = require("../data/presets.js");
+const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
 const {RULES} = require("./rules");
 
@@ -365,6 +366,20 @@ const commands = {
             autohost.sendMessage(username, `${args[0].toUpperCase()} is no longer a moderator.`);
 
             autohost.emit("configchange");
+        }
+    },
+    host: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            getUser(autohost.host).then(user => {
+                if (user) {
+                    autohost.sendMessage(username, `The host of the room is ${user.username.toUpperCase()}.`);
+                } else {
+                    autohost.sendMessage(username, "Sorry, I don't know who the host is.");
+                }
+            });
         }
     }
 };

@@ -342,6 +342,8 @@ const commands = {
             if (modRecipient !== user) {
                 autohost.modPlayer(modRecipient, args[0]);
                 autohost.sendMessage(username, `${args[0].toUpperCase()} is now a moderator.`);
+            } else {
+                autohost.sendMessage(username, `${args[0].toUpperCase()} You're the room host already. Why would you need to mod yourself?`);
             }
 
             autohost.emit("configchange");

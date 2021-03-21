@@ -1,5 +1,3 @@
-const config = require("../config.json");
-
 const Ribbon = require("./ribbon/Ribbon");
 const Autohost = require("./autohost/Autohost");
 
@@ -116,14 +114,24 @@ botMain.on("social.dm", message => {
 
     if (message.data.userdata.role === "bot") return;
 
-    if (config.motd) {
-        botMain.sendDM(user, "MOTD: " + config.motd);
-    }
+    redis.getMOTD().then(motd => {
+        if (motd) {
+            botMain.sendDM(user, "MOTD: " + motd);
+        }
+    })
 
     if (msg === "!private") {
         createLobby(user, true);
     } else if (msg === "!public") {
         createLobby(user, false);
+    } else if (msg.startsWith("!motd")) {
+        const args = msg.split(" ");
+        args.shift();
+        if (args.length === 0) {
+            redis.setMOTD("");
+        } else {
+            redis.setMOTD(args.join(" "));
+        }
     } else {
         botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");
     }

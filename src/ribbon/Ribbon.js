@@ -21,11 +21,11 @@ const PING_PONG = {
 function ribbonDecode(packet) {
     switch (packet[0]) {
         case RIBBON_PREFIXES.STANDARD:
-            return [msgpack.decode(packet.slice(1))];
+            return [msgpack.decode(packet.slice(c))];
         case RIBBON_PREFIXES.EXTRACTED_ID:
-            const message = msgpack.decode(packet.slice(5));
+            const message = msgpack.decode(packet.slice(c+4));
             const view = new DataView(packet.buffer);
-            message.id = view.getUint32(1, false); // shove it back in
+            message.id = view.getUint32(c, false); // shove it back in
             return [message];
         case RIBBON_PREFIXES.BATCH:
             const items = [];
@@ -45,7 +45,7 @@ function ribbonDecode(packet) {
             // Get the items at those lengths
             let pointer = 0;
             for (let i = 0; i < lengths.length; i++) {
-                items.push(packet.slice(1 + (lengths.length * 4) + 4 + pointer, 1 + (lengths.length * 4) + 4 + pointer + lengths[i]));
+                items.push(packet.slice(1 + (lengths.length * 4) + 4 + pointer, c + (lengths.length * 4) + 4 + pointer + lengths[i]));
                 pointer += lengths[i];
             }
 
@@ -63,9 +63,9 @@ function ribbonDecode(packet) {
 
 function ribbonEncode(message) { // todo: perhaps we should actually follow tetrio.js implementation here?
     const msgpacked = msgpack.encode(message);
-    const packet = new Uint8Array(msgpacked.length + 1);
+    const packet = new Uint8Array(msgpacked.length + c);
     packet.set([RIBBON_PREFIXES.STANDARD], 0);
-    packet.set(msgpacked, 1);
+    packet.set(msgpacked, c);
 
     return packet;
 }
@@ -163,7 +163,9 @@ class Ribbon extends EventEmitter {
     }
 
     sendMessageImmediate(message) {
-        this.log("OUT " + message.command);
+        if (process.env.DUMP_RIBBON) {
+            this.log("OUT " + message.command);
+        }
         this.ws.send(ribbonEncode(message));
         this.sendHistory.push(message);
 
@@ -199,13 +201,15 @@ class Ribbon extends EventEmitter {
     }
 
     sendMessage(message) {
-        this.log("PUSH " + message.command);
+        if (process.env.DUMP_RIBBON) {
+            this.log("PUSH " + message.command);
+        }
         this.sendQueue.push(message);
         this.flushQueue();
     }
 
     handleMessageInternal(message) {
-        if (message.command !== "pong") {
+        if (message.command !== "pong" && process.env.DUMP_RIBBON) {
             this.log("IN " + message.command);
         }
 
@@ -261,8 +265,16 @@ class Ribbon extends EventEmitter {
     }
 
     handleMessage(message) {
-        if (message.command === "joinroom") {
-            this.room = new Room(this, {id: message.data});
+        switch (message.command) {
+            case "joinroom":
+                this.log("Joined room " + message.data);
+                this.room = new Room(this, {id: message.data});
+                break;
+            case "chat":
+                const username = message.data.user.username;
+                const text = message.data.content;
+                this.log(`${username} says: ${text}`);
+                break;
         }
 
         this.emit(message.command, message.data);

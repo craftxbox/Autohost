@@ -23,6 +23,10 @@ class Autohost extends EventEmitter {
         this.bannedUsers = new Map();
         this.moderatorUsers = new Map();
 
+        this.twoPlayerOpponent = undefined;
+        this.twoPlayerChallenger = undefined;
+        this.twoPlayerQueue = [];
+
         this.warnings = {};
 
         this.rules = {
@@ -61,13 +65,31 @@ class Autohost extends EventEmitter {
             if (profile) {
                 this.usernamesToIds.delete(profile.username.toLowerCase());
             }
+
+            if (this.twoPlayerChallenger === leave) {
+                this.twoPlayerChallenger = undefined;
+                this.nextChallenger();
+                return;
+            }
+
+            if (this.twoPlayerOpponent === leave) {
+                this.twoPlayerOpponent = undefined;
+                this.autostart = 0;
+                this.twoPlayerQueue = [];
+                this.ribbon.sendChatMessage("The 1v1 queue was disabled because the opponent left.");
+            }
+
+            const queueIndex = this.twoPlayerQueue.indexOf(leave);
+            if (queueIndex !== -1) {
+                this.twoPlayerQueue.splice(queueIndex, 1);
+            }
         });
 
         this.ribbon.on("gmupdate.bracket", async update => {
             if (!this.ribbon.room.isHost || this.host === update.uid || update.bracket === "spectator") return;
 
             const playerData = await this.getPlayerData(update.uid);
-            const ineligibleMessage = checkAll(this.rules, playerData);
+            const ineligibleMessage = this.twoPlayerOpponent ? this.check2pEligibility(update.uid) : checkAll(this.rules, playerData);
 
             if (ineligibleMessage) {
                 const warnings = this.warnings.hasOwnProperty(update.uid) ? this.warnings[update.uid] + 1 : 1;
@@ -92,7 +114,7 @@ class Autohost extends EventEmitter {
 
             const username = chat.user.username;
             const user = chat.user._id;
-            const message = chat.content;
+            const message = chat.content.trim();
             const host = user === this.host;
             const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
             const dev = isDeveloper(user)
@@ -127,6 +149,7 @@ class Autohost extends EventEmitter {
         this.ribbon.on("endmulti", () => {
             this.gameEndedAt = Date.now();
             setTimeout(() => {
+                this.nextChallenger();
                 this.checkAutostart();
             }, 10000);
         });
@@ -157,16 +180,22 @@ class Autohost extends EventEmitter {
 - Use !preset to enable special rulesets.
 - Use !autostart to allow the room to start automatically.
 - Use !hostmode to become the host, to adjust room settings.
-- Need more? Use !help for a full list of commands. 
+- Need more? Use !commands for a full list of commands. 
 
 When you're ready to start, type !start.`);
                 } else {
                     const ineligibleMessage = checkAll(this.rules, user);
 
                     if (ineligibleMessage) {
-                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.`);
+                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
                     } else {
-                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}.`);
+                        if (this.twoPlayerOpponent) {
+                            this.getPlayerData(this.twoPlayerOpponent).then(opponent => {
+                                this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. Type !queue to join the 1v1 queue against ${opponent.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            });
+                        } else {
+                            this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        }
                         return;
                     }
 
@@ -186,7 +215,7 @@ When you're ready to start, type !start.`);
         if (this.usernamesToIds.has(username.toLowerCase())) {
             return this.usernamesToIds.get(username.toLowerCase());
         } else {
-            return undefined; // we can't get this yet
+            return (await this.getPlayerData(username.toLowerCase()))._id;
         }
     }
 
@@ -194,10 +223,11 @@ When you're ready to start, type !start.`);
         if (this.playerData.has(player)) {
             return this.playerData.get(player);
         } else {
+            console.log("Loading player data for " + player);
             const data = await api.getUser(player);
             if (data) {
-                this.playerData.set(player, data);
-                this.usernamesToIds.set(data.username.toLowerCase(), player);
+                this.playerData.set(data._id, data);
+                this.usernamesToIds.set(data.username.toLowerCase(), data._id);
             }
             return data;
         }
@@ -222,7 +252,7 @@ When you're ready to start, type !start.`);
     recheckPlayers() {
         return Promise.all(this.ribbon.room.players.map(async player => {
             const playerData = await this.getPlayerData(player);
-            if (checkAll(this.rules, playerData)) {
+            if (this.twoPlayerOpponent ? this.check2pEligibility(player) : checkAll(this.rules, playerData)) {
                 if (this.ribbon.room.ingame) {
                     this.ribbon.room.kickPlayer(player);
                 } else {
@@ -259,6 +289,40 @@ When you're ready to start, type !start.`);
                 });
             }, this.autostart * 1000);
         }
+    }
+
+    check2pEligibility(user) {
+        if (this.twoPlayerChallenger !== user && this.twoPlayerOpponent !== user) {
+            if (this.twoPlayerQueue.indexOf(user) === -1) {
+                return "There is currently a queue for 1v1s in this room - type !queue to join";
+            } else {
+                return "Please wait to play";
+            }
+        }
+    }
+
+    nextChallenger() {
+        if (!this.twoPlayerOpponent || this.ingame) {
+            return;
+        }
+
+        this.twoPlayerChallenger = this.twoPlayerQueue.shift();
+
+        this.ribbon.room.players.forEach(player => {
+            this.ribbon.room.switchPlayerBracket(player, "spectator");
+        });
+
+        if (!this.twoPlayerChallenger) {
+            this.ribbon.sendChatMessage("The 1v1 queue is empty! Type !queue to join.");
+            return;
+        }
+
+        this.ribbon.room.switchPlayerBracket(this.twoPlayerOpponent, "player");
+        this.ribbon.room.switchPlayerBracket(this.twoPlayerChallenger, "player");
+
+        this.getPlayerData(this.twoPlayerChallenger).then(playerData => {
+            this.ribbon.sendChatMessage(`${playerData.username.toUpperCase()} is up next!`);
+        });
     }
 }
 

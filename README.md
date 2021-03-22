@@ -42,6 +42,7 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |---|---|---|
 |!help| |Shows the help message.|
 |!host| |Shows who the current host is.|
+|!queue| |In 1v1 mode, joins the queue.|
 |!rules| |Shows the current participation rules.|
 |!sip| |:serikasip:|
 
@@ -54,7 +55,9 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |!cancelstart| |Cancels a pending autostart.|
 |!hostmode| |Toggles host mode. This temporarily gives you control over the room to change any settings you want.|
 |!kick|`<username>`|Kicks a player from the lobby.|
+|!opponent|`<username>`|Enable 1v1 mode, and sets `<username>` as the opponent.|
 |!preset|`<preset name>`|Sets a preset for the game. Type `!preset` without any arguments to see a list.|
+|!queueoff| |Disables 1v1 mode.|
 |!sethost|`<username>`|Transfer host privileges to another player.|
 |!setrule|`<rule> <value>`|Sets a participation rule. Type `!setrule` without any arguments to see a list.|
 |!start| |Starts the game.|
@@ -66,8 +69,9 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |Command|Arguments|Description|
 |---|---|---|
 |!hostmode| |Toggles host mode. This temporarily gives you control over the room to change any settings you want.|
-|!sethost|`<username>`|Transfer host privileges to another player.|
 |!mod|`<username>`|Make another player a room moderator.|
+|!sethost|`<username>`|Transfer host privileges to another player.|
+|!shutdown| |Closes the lobby.|
 |!unmod|`<username>`|Remove room moderator from another player.|
 
 ### Developer only

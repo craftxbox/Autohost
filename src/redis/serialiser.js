@@ -4,6 +4,9 @@ function serialise(autohost) {
     data.host = autohost.host;
     data.bannedUsers = [...autohost.bannedUsers];
     data.moderatorUsers = [...autohost.moderatorUsers];
+    data.twoPlayerChallenger = autohost.twoPlayerChallenger;
+    data.twoPlayerOpponent = autohost.twoPlayerOpponent;
+    data.twoPlayerQueue = autohost.twoPlayerQueue;
     data.rules = autohost.rules;
     data.roomID = autohost.roomID;
     data.isPrivate = autohost.isPrivate;
@@ -22,6 +25,9 @@ function deserialise(data, target) {
     target.isPrivate = data.isPrivate;
     target.persist = data.persist;
     target.autostart = data.autostart;
+    target.twoPlayerChallenger = data.twoPlayerChallenger;
+    target.twoPlayerOpponent = data.twoPlayerOpponent;
+    target.twoPlayerQueue = data.twoPlayerQueue;
 }
 
 module.exports = {serialise, deserialise};

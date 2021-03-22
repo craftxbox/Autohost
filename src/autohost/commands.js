@@ -1,4 +1,5 @@
 const presets = require("../data/presets.js");
+const {checkAll} = require("./rules");
 const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
 const {RULES} = require("./rules");
@@ -17,7 +18,7 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: function (user, username, args, autohost) {
-            autohost.ribbon.sendChatMessage("Visit the GitHub page for detailed help, or if you wish to report an issue: https://git.io/JmqEY\n\nWant to add me to your own room? Add me as a friend and send a DM.\n\nPlease note that this bot is still under development and may contain bugs.");
+            autohost.ribbon.sendChatMessage("For a list of commands, type !commands. For detailed help, to contribute code or to create a bug report, visit the project homepage:\n\nhttps://kagar.in/autohost\n\nAutohost is developed by Zudo (Zudo#0800 on Discord) - feel free to send me any feedback!");
         }
     },
     kick: {
@@ -39,6 +40,11 @@ const commands = {
 
             if (!kickRecipient) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
+                return;
+            }
+
+            if (kickRecipient === global.botUserID) {
+                autohost.sendMessage(username, "Hey, don't kick me!");
                 return;
             }
 
@@ -84,6 +90,11 @@ const commands = {
 
             if (!banRecipient) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
+                return;
+            }
+
+            if (banRecipient === global.botUserID) {
+                autohost.sendMessage(username, "Hey, don't ban me!");
                 return;
             }
 
@@ -237,6 +248,11 @@ const commands = {
                 return;
             }
 
+            if (newHost === global.botUserID) {
+                autohost.sendMessage(username, "I'm always the host :woke:");
+                return;
+            }
+
             if (!autohost.ribbon.room.isHost) {
                 autohost.ribbon.room.takeOwnership()
             }
@@ -341,6 +357,11 @@ const commands = {
                 return;
             }
 
+            if (modRecipient === global.botUserID) {
+                autohost.sendMessage(username, "No need to mod me!");
+                return;
+            }
+
             if (modRecipient !== user) {
                 autohost.modPlayer(modRecipient, args[0]);
                 autohost.sendMessage(username, `${args[0].toUpperCase()} is now a moderator.`);
@@ -373,13 +394,107 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: async function (user, username, args, autohost) {
-            getUser(autohost.host).then(user => {
-                if (user) {
-                    autohost.sendMessage(username, `The host of the room is ${user.username.toUpperCase()}.`);
-                } else {
-                    autohost.sendMessage(username, "Sorry, I don't know who the host is.");
+            const host = await getUser(autohost.host);
+
+            if (host) {
+                autohost.sendMessage(username, `The host of the room is ${host.username.toUpperCase()}.`);
+            } else {
+                autohost.sendMessage(username, "Sorry, I don't know who the host is.");
+            }
+        }
+    },
+    opponent: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !opponent <username>");
+                return;
+            }
+
+            const oldOpponent = autohost.twoPlayerOpponent;
+
+            const opponent = await autohost.getUserID(args[0]);
+
+            if (opponent) {
+                if (opponent === global.botUserID) {
+                    autohost.sendMessage(username, "I don't know how to play the game! Don't try to 1v1 me please :crying:");
+                    return;
                 }
-            });
+
+                autohost.twoPlayerOpponent = opponent;
+                autohost.twoPlayerChallenger = undefined;
+                autohost.twoPlayerQueue = [];
+                autohost.sendMessage(username, `1v1 matchups are now against ${args[0].toUpperCase()}. Type !queue to join.`);
+                if (oldOpponent) {
+                    autohost.ribbon.room.switchPlayerBracket(oldOpponent, "spectator");
+                }
+                autohost.ribbon.room.switchPlayerBracket(opponent, "players");
+            } else {
+                autohost.sendMessage(username, "That player is not in this lobby.");
+            }
+
+            autohost.emit("configchange");
+        }
+    },
+    queue: {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (!autohost.twoPlayerOpponent) {
+                autohost.sendMessage(username, "The 1v1 queue is currently turned off. Lobby moderators can use !opponent to turn it on.");
+                return;
+            } else if (autohost.twoPlayerOpponent === user) {
+                autohost.sendMessage(username, "You can't queue against yourself in a 1v1.");
+                return;
+            }
+
+            const rulesMessage = checkAll(autohost.rules, await getUser(user))
+
+            if (rulesMessage) {
+                autohost.sendMessage(username, rulesMessage + ".");
+                return;
+            }
+
+
+            const queuePos = autohost.twoPlayerQueue.indexOf(user);
+
+            if (queuePos === -1) {
+                autohost.twoPlayerQueue.push(user);
+                if (!autohost.twoPlayerChallenger) {
+                    autohost.nextChallenger();
+                } else {
+                    autohost.sendMessage(username, `You're now in the queue at position ${autohost.twoPlayerQueue.length}`);
+                }
+            } else {
+                autohost.sendMessage(username, `You're #${queuePos + 1} in the queue.`);
+            }
+
+            autohost.emit("configchange");
+        }
+    },
+    queueoff: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            autohost.twoPlayerOpponent = undefined;
+            autohost.twoPlayerQueue = [];
+            autohost.autostart = 0;
+            autohost.sendMessage(username, "The 1v1 queue was disabled.");
+            autohost.emit("configchange");
+        }
+    },
+    commands: {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            const commandList = Object.keys(commands);
+            commandList.sort();
+            autohost.ribbon.sendChatMessage(commandList.map(cmd => "!" + cmd).join(", "));
         }
     }
 };

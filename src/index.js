@@ -32,6 +32,11 @@ api.getMe().then(user => {
 
     const sessions = new Map();
 
+    botMain.on("dead", () => {
+        console.log("Main ribbon died! Rebooting...");
+        process.kill(process.pid, "SIGINT");
+    });
+
     botMain.on("ready", () => {
         console.log("Bot main (social) logged in.");
         botMain.sendMessage({
@@ -68,8 +73,35 @@ api.getMe().then(user => {
             });
         });
 
-        ribbon.on("die", () => {
-            // todo: recover from ribbon failure
+        ribbon.on("dead", () => {
+            console.log("Ribbon died! Starting a new one.");
+            // connect with a new ribbon
+            const newRibbon = new Ribbon(process.env.TOKEN);
+
+            newAutohost.on("err", error => {
+                if (error === "no such room") {
+                    ribbon.disconnectGracefully();
+                }
+            });
+
+            newRibbon.once("joinroom", () => {
+                newRibbon.room.takeOwnership();
+
+                const newAutohost = new Autohost(newRibbon, ah.host, ah.isPrivate);
+
+                newRibbon.sendChatMessage("Room settings have been restored.");
+
+                applyRoomEvents(newAutohost, ribbon, user);
+                deserialise(serialise(ah), newAutohost);
+
+                sessions.set(user, ah);
+            });
+
+            newRibbon.once("ready", () => {
+                newRibbon.joinRoom(ah.room.id);
+            });
+
+            applyRoomEvents(newAutohost, newRibbon, user);
         });
 
         ribbon.on("kick", () => {

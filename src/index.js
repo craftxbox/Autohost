@@ -100,8 +100,6 @@ api.getMe().then(user => {
             newRibbon.once("ready", () => {
                 newRibbon.joinRoom(ah.room.id);
             });
-
-            applyRoomEvents(newAutohost, newRibbon, user);
         });
 
         ribbon.on("kick", () => {

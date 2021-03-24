@@ -73,9 +73,7 @@ class Autohost extends EventEmitter {
             }
 
             if (this.twoPlayerOpponent === leave) {
-                this.twoPlayerOpponent = undefined;
-                this.autostart = 0;
-                this.twoPlayerQueue = [];
+                this.disableQueue();
                 this.ribbon.sendChatMessage("The 1v1 queue was disabled because the opponent left.");
             }
 
@@ -277,11 +275,15 @@ When you're ready to start, type !start.`);
         if (this.ingame) return;
 
         if (this.ribbon.room.players.length < 2 && this.autostartTimer) {
-            this.ribbon.sendChatMessage("Start cancelled - waiting for players...");
+            if (!this.twoPlayerOpponent) {
+                this.ribbon.sendChatMessage("Start cancelled - waiting for players...");
+            }
             clearTimeout(this.autostartTimer);
             this.autostartTimer = undefined;
         } else if (this.ribbon.room.players.length >= 2 && !this.autostartTimer) {
-            this.ribbon.sendChatMessage("Game starting in " + this.autostart + " seconds!");
+            if (!this.twoPlayerOpponent) {
+                this.ribbon.sendChatMessage("Game starting in " + this.autostart + " seconds!");
+            }
             this.autostartTimer = setTimeout(() => {
                 this.recheckPlayers().then(() => {
                     this.ribbon.room.start();
@@ -323,6 +325,17 @@ When you're ready to start, type !start.`);
         this.getPlayerData(this.twoPlayerChallenger).then(playerData => {
             this.ribbon.sendChatMessage(`${playerData.username.toUpperCase()} is up next!`);
         });
+    }
+
+    disableQueue() {
+        this.twoPlayerOpponent = undefined;
+        this.twoPlayerQueue = [];
+        this.autostart = 0
+        if (this.autostartTimer) {
+            clearTimeout(this.autostartTimer);
+            this.autostartTimer = undefined;
+        }
+        this.emit("configchange");
     }
 }
 

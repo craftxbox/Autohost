@@ -480,11 +480,8 @@ const commands = {
         modonly: true,
         devonly: false,
         handler: async function (user, username, args, autohost) {
-            autohost.twoPlayerOpponent = undefined;
-            autohost.twoPlayerQueue = [];
-            autohost.autostart = 0;
+            autohost.disableQueue();
             autohost.sendMessage(username, "The 1v1 queue was disabled.");
-            autohost.emit("configchange");
         }
     },
     commands: {

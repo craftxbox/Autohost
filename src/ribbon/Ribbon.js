@@ -220,7 +220,7 @@ class Ribbon extends EventEmitter {
                 break;
             case "nope":
                 this.log("Ribbon noped out! " + JSON.stringify(message));
-                this.die();
+                this.ws.close();
                 break;
             case "hello":
                 this.socket_id = message.id;

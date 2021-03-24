@@ -73,35 +73,6 @@ api.getMe().then(user => {
             });
         });
 
-        ribbon.on("dead", () => {
-            console.log("Ribbon died! Starting a new one.");
-            // connect with a new ribbon
-            const newRibbon = new Ribbon(process.env.TOKEN);
-
-            newAutohost.on("err", error => {
-                if (error === "no such room") {
-                    ribbon.disconnectGracefully();
-                }
-            });
-
-            newRibbon.once("joinroom", () => {
-                newRibbon.room.takeOwnership();
-
-                const newAutohost = new Autohost(newRibbon, ah.host, ah.isPrivate);
-
-                newRibbon.sendChatMessage("Room settings have been restored.");
-
-                applyRoomEvents(newAutohost, ribbon, user);
-                deserialise(serialise(ah), newAutohost);
-
-                sessions.set(user, ah);
-            });
-
-            newRibbon.once("ready", () => {
-                newRibbon.joinRoom(ah.room.id);
-            });
-        });
-
         ribbon.on("kick", () => {
             botMain.sendDM(user, `I was kicked from the lobby.`);
             ribbon.disconnectGracefully();

@@ -35,7 +35,7 @@ const RULES = {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
-            return value !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) > RANK_HIERARCHY.indexOf(value)
+            return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) > RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
             return `Your TR is too high for this room (maximum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`
@@ -52,7 +52,7 @@ const RULES = {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
-            return value !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value)
+            return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
             return `Your TR is too low for this room (minimum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`

@@ -18,6 +18,8 @@ class Autohost extends EventEmitter {
         this.isPrivate = isPrivate;
         this.host = host;
 
+        this.motd = undefined;
+
         this.playerData = new Map();
         this.usernamesToIds = new Map();
         this.bannedUsers = new Map();
@@ -38,9 +40,6 @@ class Autohost extends EventEmitter {
         };
 
         this.autostart = 0;
-
-        this.hostDidJoin = false;
-        this.didLoadUsers = false;
 
         this.ribbon = ribbon;
 
@@ -136,7 +135,7 @@ class Autohost extends EventEmitter {
                 }
 
                 if (!host && !mod && !dev && commandObj.modonly) {
-                    this.sendMessage(username, "Only the lobby moderators can use this command.");
+                    this.sendMessage(username, "Only lobby moderators can use this command.");
                     return;
                 }
 
@@ -170,6 +169,10 @@ class Autohost extends EventEmitter {
             api.getUser(join._id).then(user => {
                 this.playerData.set(user._id, user);
                 this.usernamesToIds.set(user.username.toLowerCase(), user._id);
+
+                if (this.motd) {
+                    this.ribbon.sendChatMessage(this.motd);
+                }
 
                 if (join._id === this.host) {
                     this.ribbon.sendChatMessage(`Welcome to your room, ${join.username.toUpperCase()}!
@@ -213,7 +216,8 @@ When you're ready to start, type !start.`);
         if (this.usernamesToIds.has(username.toLowerCase())) {
             return this.usernamesToIds.get(username.toLowerCase());
         } else {
-            return (await this.getPlayerData(username.toLowerCase()))._id;
+            const data = (await this.getPlayerData(username.toLowerCase()));
+            return data ? data._id : undefined;
         }
     }
 

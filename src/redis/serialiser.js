@@ -12,6 +12,7 @@ function serialise(autohost) {
     data.isPrivate = autohost.isPrivate;
     data.persist = autohost.persist;
     data.autostart = autohost.autostart;
+    data.motd = autohost.motd;
 
     return data;
 }
@@ -28,6 +29,7 @@ function deserialise(data, target) {
     target.twoPlayerChallenger = data.twoPlayerChallenger;
     target.twoPlayerOpponent = data.twoPlayerOpponent;
     target.twoPlayerQueue = data.twoPlayerQueue;
+    target.motd = data.motd;
 }
 
 module.exports = {serialise, deserialise};

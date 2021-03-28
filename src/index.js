@@ -6,6 +6,7 @@ const api = require("./gameapi/api");
 const redis = require("./redis/redis");
 const {isDeveloper} = require("./data/developers");
 const {serialise, deserialise} = require("./redis/serialiser");
+const {randomBytes} = require("crypto");
 
 require("dotenv").config({path: path.join(__dirname, "../.env")});
 
@@ -17,6 +18,21 @@ if (!process.env.TOKEN) {
 
 let botMain;
 const sessions = new Map();
+
+function generateSessionID() {
+    let id = undefined;
+    do {
+        id = randomBytes(32).toString("hex")
+    } while (sessions.has(id));
+
+    return id;
+}
+
+function getHostLobby(host) {
+    return [...sessions.values()].find(ah => {
+        return ah.host === host && !ah.persist;
+    });
+}
 
 function restoreLobbies() {
     redis.getAllLobbies().then(lobbies => {
@@ -51,7 +67,7 @@ function restoreLobbies() {
 
                 ribbon.sendChatMessage("Room settings have been restored.");
 
-                applyRoomEvents(ah, ribbon, lobby.host);
+                applyRoomEvents(ah, ribbon, lobby.host, key);
                 deserialise(lobby, ah);
 
                 sessions.set(lobby.host, ah);
@@ -64,35 +80,35 @@ function restoreLobbies() {
     });
 }
 
-function applyRoomEvents(ah, ribbon, user) {
+function applyRoomEvents(ah, ribbon, host, id) {
     ah.on("end", () => {
-        botMain.sendDM(user, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
+        botMain.sendDM(host, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
         ribbon.disconnectGracefully();
-        sessions.delete(user);
-        redis.deleteLobby(user).then(() => {
-            console.log("Deleted lobby settings for " + user);
+        sessions.delete(id);
+        redis.deleteLobby(id).then(() => {
+            console.log("Deleted lobby settings for " + id);
         });
     });
 
     ah.on("stop", () => {
-        botMain.sendDM(user, `I've left your lobby.`);
+        botMain.sendDM(host, `I've left your lobby.`);
         ribbon.disconnectGracefully();
-        sessions.delete(user);
-        redis.deleteLobby(user).then(() => {
-            console.log("Deleted lobby settings for " + user);
+        sessions.delete(id);
+        redis.deleteLobby(id).then(() => {
+            console.log("Deleted lobby settings for " + id);
         });
     });
 
     ah.on("configchange", () => {
         const config = serialise(ah);
-        redis.setLobby(user, config).then(() => {
-            console.log("Saved lobby settings for " + user);
+        redis.setLobby(id, config).then(() => {
+            console.log("Saved lobby settings for " + id);
         });
     });
 
     ribbon.on("kick", () => {
         ribbon.disconnectGracefully();
-        sessions.delete(user);
+        sessions.delete(id);
 
         setTimeout(() => {
             restoreLobbies();
@@ -101,7 +117,7 @@ function applyRoomEvents(ah, ribbon, user) {
 
     ribbon.on("nope", () => {
         ribbon.disconnectGracefully();
-        sessions.delete(user);
+        sessions.delete(id);
 
         setTimeout(() => {
             restoreLobbies();
@@ -109,44 +125,46 @@ function applyRoomEvents(ah, ribbon, user) {
     });
 }
 
-function createLobby(user, isPrivate) {
-    if (sessions.has(user)) {
-        const ah = sessions.get(user);
-        botMain.sendDM(user, `You already have a lobby open. Join #${ah.roomID}`);
-        ah.ribbon.socialInvite(user);
-    } else {
+function createLobby(host, isPrivate, fixedID) {
+    return new Promise((resolve, reject) => {
+        if (sessions.has(fixedID)) return;
+
         const ribbon = new Ribbon(process.env.TOKEN);
 
         ribbon.once("joinroom", () => {
-            const ah = new Autohost(ribbon, user, isPrivate);
+            const id = fixedID ? fixedID : generateSessionID();
 
-            applyRoomEvents(ah, ribbon, user);
+            const ah = new Autohost(ribbon, host, isPrivate);
 
-            sessions.set(user, ah);
+            applyRoomEvents(ah, ribbon, host, id);
+
+            sessions.set(id, ah);
 
             const config = serialise(ah);
-            redis.setLobby(user, config).then(() => {
-                console.log("Saved inital lobby settings for " + user);
+
+            redis.setLobby(host, config).then(() => {
+                console.log("Saved initial lobby settings for " + host);
             });
 
-            api.getUser(user).then(host => {
+            api.getUser(host).then(user => {
+                ah.ribbon.once("gmupdate", () => {
+                    botMain.sendDM(host, `Lobby created! Join #${ribbon.room.id}`);
+                    ribbon.socialInvite(host);
+                    resolve(ah);
+                });
+
                 if (host) {
-                    ah.ribbon.room.setName(`${host.username.toUpperCase()}'s ${isPrivate ? "private " : ""}room`);
+                    ah.ribbon.room.setName(`${user.username.toUpperCase()}'s ${isPrivate ? "private " : ""}room`);
                 } else {
                     ah.ribbon.room.setName("Custom room");
                 }
-
-                ribbon.once("gmupdate", () => {
-                    botMain.sendDM(user, `Lobby created! Join #${ribbon.room.id}`);
-                    ribbon.socialInvite(user);
-                });
             });
         });
 
         ribbon.once("ready", () => {
             ribbon.createRoom(isPrivate);
         });
-    }
+    });
 }
 
 api.getMe().then(user => {
@@ -192,10 +210,14 @@ api.getMe().then(user => {
             }
         })
 
-        if (msg === "!private") {
-            createLobby(user, true);
-        } else if (msg === "!public") {
-            createLobby(user, false);
+        const lobby = getHostLobby(user);
+
+        if (msg === "!private" || msg === "!public") {
+            if (lobby) {
+                botMain.sendDM(user, "You already have a lobby open. Join #" + lobby.ribbon.room.id);
+            } else {
+                createLobby(user, msg === "!private");
+            }
         } else if (msg.startsWith("!motd") && isDeveloper(user)) {
             const args = msg.split(" ");
             args.shift();
@@ -207,7 +229,6 @@ api.getMe().then(user => {
         } else {
             botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");
         }
-
     });
 
     process.on("SIGINT", () => {
@@ -224,4 +245,18 @@ api.getMe().then(user => {
     });
 
     restoreLobbies();
+
+    createLobby(botUserID, false, "persistLobby_S").then(ah => {
+        ah.persist = true;
+
+        ah.ribbon.room.setName("[AUTO] S AND BELOW ONLY");
+
+        ah.motd = "This is an unattended room. Contact Zudo (Zudo#0800 on Discord) if there are any issues.";
+        ah.rules.anons_allowed = false;
+        ah.rules.unranked_allowed = false;
+        ah.rules.max_rank = "s";
+        ah.autostart = 10;
+
+        ah.emit("configchange");
+    });
 });

@@ -15,179 +15,21 @@ if (!process.env.TOKEN) {
     process.exit(1);
 }
 
-api.getMe().then(user => {
-    if (!user) {
-        console.log("Your bot token is invalid.");
-        process.exit(1);
-    }
+let botMain;
+const sessions = new Map();
 
-    global.botUserID = user._id; // thanks i also hate it
-
-    if (user.role !== "bot") {
-        console.log("ERROR: This is NOT a bot account.\n\nDo NOT attempt to run bot code on a regular user account, or you WILL be PERMANENTLY BANNED from the game..");
-        process.exit(1);
-    }
-
-    const botMain = new Ribbon(process.env.TOKEN);
-
-    const sessions = new Map();
-
-    botMain.on("dead", () => {
-        console.log("Main ribbon died! Rebooting...");
-        process.kill(process.pid, "SIGINT");
-    });
-
-    botMain.on("ready", () => {
-        console.log("Bot main (social) logged in.");
-        botMain.sendMessage({
-            command: "social.presence",
-            data: {
-                status: "online"
-            }
-        });
-    });
-
-    function applyRoomEvents(ah, ribbon, user) {
-        ah.on("end", () => {
-            botMain.sendDM(user, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
-            ribbon.disconnectGracefully();
-            sessions.delete(user);
-            redis.deleteLobby(user).then(() => {
-                console.log("Deleted lobby settings for " + user);
-            });
-        });
-
-        ah.on("stop", () => {
-            botMain.sendDM(user, `I've left your lobby.`);
-            ribbon.disconnectGracefully();
-            sessions.delete(user);
-            redis.deleteLobby(user).then(() => {
-                console.log("Deleted lobby settings for " + user);
-            });
-        });
-
-        ah.on("configchange", () => {
-            const config = serialise(ah);
-            redis.setLobby(user, config).then(() => {
-                console.log("Saved lobby settings for " + user);
-            });
-        });
-
-        ribbon.on("dead", () => {
-            console.log("Ribbon died! Starting a new one.");
-            // connect with a new ribbon
-            const newRibbon = new Ribbon(process.env.TOKEN);
-
-            newAutohost.on("err", error => {
-                if (error === "no such room") {
-                    ribbon.disconnectGracefully();
-                }
-            });
-
-            newRibbon.once("joinroom", () => {
-                newRibbon.room.takeOwnership();
-
-                const newAutohost = new Autohost(newRibbon, ah.host, ah.isPrivate);
-
-                newRibbon.sendChatMessage("Room settings have been restored.");
-
-                applyRoomEvents(newAutohost, ribbon, user);
-                deserialise(serialise(ah), newAutohost);
-
-                sessions.set(user, ah);
-            });
-
-            newRibbon.once("ready", () => {
-                newRibbon.joinRoom(ah.room.id);
-            });
-        });
-
-        ribbon.on("kick", () => {
-            botMain.sendDM(user, `I was kicked from the lobby.`);
-            ribbon.disconnectGracefully();
-            sessions.delete(user);
-            redis.deleteLobby(user).then(() => {
-                console.log("Deleted lobby settings for " + user);
-            });
-        });
-    }
-
-    function createLobby(user, isPrivate) {
-        if (sessions.has(user)) {
-            const ah = sessions.get(user);
-            botMain.sendDM(user, `You already have a lobby open. Join #${ah.roomID}`);
-            ah.ribbon.socialInvite(user);
-        } else {
-            const ribbon = new Ribbon(process.env.TOKEN);
-
-            ribbon.once("joinroom", () => {
-                const ah = new Autohost(ribbon, user, isPrivate);
-
-                applyRoomEvents(ah, ribbon, user);
-
-                sessions.set(user, ah);
-
-                const config = serialise(ah);
-                redis.setLobby(user, config).then(() => {
-                    console.log("Saved inital lobby settings for " + user);
-                });
-
-                api.getUser(user).then(host => {
-                    if (host) {
-                        ah.ribbon.room.setName(`${host.username.toUpperCase()}'s ${isPrivate ? "private " : ""}room`);
-                    } else {
-                        ah.ribbon.room.setName("Custom room");
-                    }
-
-                    ribbon.once("gmupdate", () => {
-                        botMain.sendDM(user, `Lobby created! Join #${ribbon.room.id}`);
-                        ribbon.socialInvite(user);
-                    });
-                });
-            });
-
-            ribbon.once("ready", () => {
-                ribbon.createRoom(isPrivate);
-            });
-        }
-    }
-
-    botMain.on("social.dm", message => {
-        const msg = message.data.content.trim().toLowerCase();
-        const user = message.data.user;
-
-        if (message.data.userdata.role === "bot") return;
-
-        redis.getMOTD().then(motd => {
-            if (motd) {
-                botMain.sendDM(user, "MOTD: " + motd);
-            }
-        })
-
-        if (msg === "!private") {
-            createLobby(user, true);
-        } else if (msg === "!public") {
-            createLobby(user, false);
-        } else if (msg.startsWith("!motd") && isDeveloper(user)) {
-            const args = msg.split(" ");
-            args.shift();
-            if (args.length === 0) {
-                redis.setMOTD("");
-            } else {
-                redis.setMOTD(args.join(" "));
-            }
-        } else {
-            botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");
-        }
-
-    });
-
+function restoreLobbies() {
     redis.getAllLobbies().then(lobbies => {
         console.log("Restoring " + lobbies.size + " lobbies.");
 
         lobbies.forEach((lobby, key) => {
+            if (sessions.has(key)) {
+                console.log(`Lobby ${key} skipped - still live`);
+                return;
+            }
+
             if (!lobby.roomID || !lobby.host) {
-                console.log("Lobby skipped - missing critical data");
+                console.log(`Lobby ${key} skipped - missing critical data`);
                 return;
             }
 
@@ -220,17 +62,166 @@ api.getMe().then(user => {
             });
         });
     });
+}
+
+function applyRoomEvents(ah, ribbon, user) {
+    ah.on("end", () => {
+        botMain.sendDM(user, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
+        ribbon.disconnectGracefully();
+        sessions.delete(user);
+        redis.deleteLobby(user).then(() => {
+            console.log("Deleted lobby settings for " + user);
+        });
+    });
+
+    ah.on("stop", () => {
+        botMain.sendDM(user, `I've left your lobby.`);
+        ribbon.disconnectGracefully();
+        sessions.delete(user);
+        redis.deleteLobby(user).then(() => {
+            console.log("Deleted lobby settings for " + user);
+        });
+    });
+
+    ah.on("configchange", () => {
+        const config = serialise(ah);
+        redis.setLobby(user, config).then(() => {
+            console.log("Saved lobby settings for " + user);
+        });
+    });
+
+    ribbon.on("kick", () => {
+        ribbon.disconnectGracefully();
+        sessions.delete(user);
+
+        setTimeout(() => {
+            restoreLobbies();
+        }, 5000);
+    });
+
+    ribbon.on("nope", () => {
+        ribbon.disconnectGracefully();
+        sessions.delete(user);
+
+        setTimeout(() => {
+            restoreLobbies();
+        }, 5000);
+    });
+}
+
+function createLobby(user, isPrivate) {
+    if (sessions.has(user)) {
+        const ah = sessions.get(user);
+        botMain.sendDM(user, `You already have a lobby open. Join #${ah.roomID}`);
+        ah.ribbon.socialInvite(user);
+    } else {
+        const ribbon = new Ribbon(process.env.TOKEN);
+
+        ribbon.once("joinroom", () => {
+            const ah = new Autohost(ribbon, user, isPrivate);
+
+            applyRoomEvents(ah, ribbon, user);
+
+            sessions.set(user, ah);
+
+            const config = serialise(ah);
+            redis.setLobby(user, config).then(() => {
+                console.log("Saved inital lobby settings for " + user);
+            });
+
+            api.getUser(user).then(host => {
+                if (host) {
+                    ah.ribbon.room.setName(`${host.username.toUpperCase()}'s ${isPrivate ? "private " : ""}room`);
+                } else {
+                    ah.ribbon.room.setName("Custom room");
+                }
+
+                ribbon.once("gmupdate", () => {
+                    botMain.sendDM(user, `Lobby created! Join #${ribbon.room.id}`);
+                    ribbon.socialInvite(user);
+                });
+            });
+        });
+
+        ribbon.once("ready", () => {
+            ribbon.createRoom(isPrivate);
+        });
+    }
+}
+
+api.getMe().then(user => {
+    if (!user) {
+        console.log("Your bot token is invalid.");
+        process.exit(1);
+    }
+
+    global.botUserID = user._id; // thanks i also hate it
+
+    if (user.role !== "bot") {
+        console.log("ERROR: This is NOT a bot account.\n\nDo NOT attempt to run bot code on a regular user account, or you WILL be PERMANENTLY BANNED from the game..");
+        process.exit(1);
+    }
+
+    botMain = new Ribbon(process.env.TOKEN);
+
+    botMain.on("dead", () => {
+        console.log("Main ribbon died! Rebooting...");
+        process.kill(process.pid, "SIGINT");
+    });
+
+    botMain.on("ready", () => {
+        console.log("Bot main (social) logged in.");
+        botMain.sendMessage({
+            command: "social.presence",
+            data: {
+                status: "online"
+            }
+        });
+    });
+
+
+    botMain.on("social.dm", message => {
+        const msg = message.data.content.trim().toLowerCase();
+        const user = message.data.user;
+
+        if (message.data.userdata.role === "bot") return;
+
+        redis.getMOTD().then(motd => {
+            if (motd) {
+                botMain.sendDM(user, "MOTD: " + motd);
+            }
+        })
+
+        if (msg === "!private") {
+            createLobby(user, true);
+        } else if (msg === "!public") {
+            createLobby(user, false);
+        } else if (msg.startsWith("!motd") && isDeveloper(user)) {
+            const args = msg.split(" ");
+            args.shift();
+            if (args.length === 0) {
+                redis.setMOTD("");
+            } else {
+                redis.setMOTD(args.join(" "));
+            }
+        } else {
+            botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");
+        }
+
+    });
 
     process.on("SIGINT", () => {
         console.log("Shutting down!");
-
-        botMain.disconnectGracefully();
         sessions.forEach(session => {
             if (session.ribbon) {
                 session.ribbon.disconnectGracefully();
             }
         });
 
+        botMain.disconnectGracefully();
+
         process.exit(0);
     });
+
+    restoreLobbies();
 });

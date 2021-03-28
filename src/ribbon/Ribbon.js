@@ -3,7 +3,7 @@ const msgpack = require("msgpack-lite");
 const EventEmitter = require("events");
 const Room = require("./Room");
 
-const CLIENT_VERSION = {"id": "d16ac3c", "time": 1615923726000};
+const CLIENT_VERSION = {"id": "3876ada", "time": 1616779398000};
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
 const RIBBON_PREFIXES = {
@@ -83,9 +83,9 @@ class Ribbon extends EventEmitter {
 
         this.migrating = false;
 
-        this.sendHistory = [];
+        this.send_history = [];
 
-        this.sendQueue = [];
+        this.send_queue = [];
         this.lastSent = 0;
 
         this.connect(RIBBON_ENDPOINT);
@@ -116,7 +116,8 @@ class Ribbon extends EventEmitter {
                     socketid: this.socket_id,
                     resumetoken: this.resume_token
                 });
-                this.sendMessageImmediate({command: "hello", packets: this.sendHistory});
+                console.log(this.send_history);
+                this.sendMessageImmediate({command: "hello", packets: this.send_history.concat(this.send_queue)});
                 this.migrating = false;
             } else {
                 this.sendMessageImmediate({command: "new"});
@@ -167,18 +168,18 @@ class Ribbon extends EventEmitter {
             this.log("OUT " + message.command);
         }
         this.ws.send(ribbonEncode(message));
-        this.sendHistory.push(message);
+        this.send_history.push(message);
 
-        if (this.sendHistory.length > 500) {
-            this.sendHistory.splice(0, this.sendHistory.length - 500);
+        if (this.send_history.length > 500) {
+            this.send_history.splice(0, this.send_history.length - 500);
         }
     }
 
     flushQueue() {
         if (!this.open) return;
-        const messageCount = this.sendQueue.length;
+        const messageCount = this.send_queue.length;
         for (let i = 0; i < messageCount; i++) {
-            const message = this.sendQueue.shift();
+            const message = this.send_queue.shift();
             this.lastSent++;
             message.id = this.lastSent;
             this.sendMessageImmediate(message);
@@ -204,7 +205,7 @@ class Ribbon extends EventEmitter {
         if (process.env.DUMP_RIBBON) {
             this.log("PUSH " + message.command);
         }
-        this.sendQueue.push(message);
+        this.send_queue.push(message);
         this.flushQueue();
     }
 
@@ -216,11 +217,12 @@ class Ribbon extends EventEmitter {
         switch (message.command) {
             case "kick":
                 this.log("Ribbon kicked! " + JSON.stringify(message));
-                this.ws.close();
+                this.emit("kick", message.data);
+                this.die();
                 break;
             case "nope":
                 this.log("Ribbon noped out! " + JSON.stringify(message));
-                this.die();
+                this.ws.close();
                 break;
             case "hello":
                 this.socket_id = message.id;

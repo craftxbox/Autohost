@@ -1,4 +1,5 @@
-const presets = require("../data/presets.js");
+const presets = require("../data/presets");
+const parse = require("../ribbon/configparser");
 const {checkAll} = require("./rules");
 const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
@@ -38,7 +39,7 @@ const commands = {
 
             const kickRecipient = await autohost.getUserID(args[0]);
 
-            if (!kickRecipient) {
+            if (autohost.ribbon.room.players.indexOf(kickRecipient) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -88,7 +89,7 @@ const commands = {
 
             const banRecipient = await autohost.getUserID(args[0]);
 
-            if (!banRecipient) {
+            if (autohost.ribbon.room.players.indexOf(banRecipient) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -116,7 +117,11 @@ const commands = {
             if (banRecipient !== user) {
                 autohost.banPlayer(banRecipient, args[0]);
                 autohost.ribbon.room.kickPlayer(banRecipient);
-                autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}.`);
+                if (autohost.ribbon.room.settings.meta.allowAnonymous) {
+                    autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}. Note that banned players can rejoin with anonymous accounts. I'll figure this out one day.`);
+                } else {
+                    autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}.`);
+                }
             } else {
                 autohost.sendMessage(username, "Why would you want to ban yourself?");
             }
@@ -243,7 +248,7 @@ const commands = {
 
             const newHost = await autohost.getUserID(args[0]);
 
-            if (!newHost) {
+            if (autohost.ribbon.room.players.indexOf(newHost) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -321,6 +326,8 @@ const commands = {
                 autohost.persist = true;
                 autohost.sendMessage(username, "Lobby will persist even if all players leave.");
             }
+
+            autohost.emit("configchange");
         }
     },
     unban: {
@@ -352,7 +359,7 @@ const commands = {
 
             const modRecipient = await autohost.getUserID(args[0]);
 
-            if (!modRecipient) {
+            if (autohost.ribbon.room.players.indexOf(modRecipient) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -417,7 +424,7 @@ const commands = {
 
             const opponent = await autohost.getUserID(args[0]);
 
-            if (opponent) {
+            if (autohost.ribbon.room.players.indexOf(opponent) === -1) {
                 if (opponent === global.botUserID) {
                     autohost.sendMessage(username, "I don't know how to play the game! Don't try to 1v1 me please :crying:");
                     return;
@@ -480,8 +487,12 @@ const commands = {
         modonly: true,
         devonly: false,
         handler: async function (user, username, args, autohost) {
-            autohost.disableQueue();
-            autohost.sendMessage(username, "The 1v1 queue was disabled.");
+            if (autohost.twoPlayerOpponent) {
+                autohost.disableQueue();
+                autohost.sendMessage(username, "The 1v1 queue was disabled.");
+            } else {
+                autohost.sendMessage(username, "The 1v1 queue is not turned on.");
+            }
         }
     },
     commands: {
@@ -491,7 +502,36 @@ const commands = {
         handler: function (user, username, args, autohost) {
             const commandList = Object.keys(commands);
             commandList.sort();
-            autohost.ribbon.sendChatMessage(commandList.map(cmd => "!" + cmd).join(", "));
+            autohost.sendMessage(username, commandList.map(cmd => "!" + cmd).join(", "));
+        }
+    },
+    set: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            if (args.length === 0) {
+                autohost.sendMessage(username, "Usage: !set <settings>");
+                autohost.sendMessage(username, "Example: !set meta.match.ft=7;game.options.gmargin=7200");
+                return;
+            }
+            const config = parse(args.join(" "));
+            autohost.ribbon.room.setRoomConfig(config);
+            autohost.sendMessage(username, "Room configuration updated.");
+        }
+    },
+    name: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            if (args.length === 0) {
+                autohost.sendMessage(username, "Usage: !name <room name>");
+                return;
+            }
+            const name = args.join(" ");
+            autohost.ribbon.room.setName(name);
+            autohost.sendMessage(username, "Room name updated.");
         }
     }
 };

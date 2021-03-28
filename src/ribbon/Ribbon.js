@@ -211,7 +211,7 @@ class Ribbon extends EventEmitter {
 
     handleMessageInternal(message) {
         if (message.command !== "pong" && process.env.DUMP_RIBBON) {
-            this.log("IN " + message.command);
+            this.log("IN " + JSON.stringify(message));
         }
 
         switch (message.command) {

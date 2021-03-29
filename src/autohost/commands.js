@@ -37,9 +37,16 @@ const commands = {
                 return;
             }
 
-            const kickRecipient = await autohost.getUserID(args[0]);
+            const playerData = await autohost.getPlayerData(args[0]);
+            const staff = ["admin", "moderator"].indexOf(playerData.role) !== -1;
+            const kickRecipient = playerData._id;
 
-            if (autohost.ribbon.room.players.indexOf(kickRecipient) === -1) {
+            if (staff) {
+                autohost.sendMessage(username, "You cannot kick TETR.IO staff.");
+                return;
+            }
+
+            if (autohost.ribbon.room.players.indexOf(kickRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(kickRecipient) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -87,9 +94,16 @@ const commands = {
                 return;
             }
 
-            const banRecipient = await autohost.getUserID(args[0]);
+            const playerData = await autohost.getPlayerData(args[0]);
+            const staff = ["admin", "moderator"].indexOf(playerData.role) !== -1;
+            const banRecipient = playerData._id;
 
-            if (autohost.ribbon.room.players.indexOf(banRecipient) === -1) {
+            if (staff) {
+                autohost.sendMessage(username, "You cannot ban TETR.IO staff.");
+                return;
+            }
+
+            if (autohost.ribbon.room.players.indexOf(banRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(banRecipient) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -248,7 +262,7 @@ const commands = {
 
             const newHost = await autohost.getUserID(args[0]);
 
-            if (autohost.ribbon.room.players.indexOf(newHost) === -1) {
+            if (autohost.ribbon.room.players.indexOf(newHost) === -1 && autohost.ribbon.room.spectators.indexOf(newHost) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -359,7 +373,7 @@ const commands = {
 
             const modRecipient = await autohost.getUserID(args[0]);
 
-            if (autohost.ribbon.room.players.indexOf(modRecipient) === -1) {
+            if (autohost.ribbon.room.players.indexOf(modRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(modRecipient) === -1) {
                 autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
@@ -397,7 +411,7 @@ const commands = {
         }
     },
     host: {
-        hostonly: true,
+        hostonly: false,
         modonly: false,
         devonly: false,
         handler: async function (user, username, args, autohost) {
@@ -424,7 +438,7 @@ const commands = {
 
             const opponent = await autohost.getUserID(args[0]);
 
-            if (autohost.ribbon.room.players.indexOf(opponent) === -1) {
+            if (autohost.ribbon.room.players.indexOf(opponent) === -1 && autohost.ribbon.room.spectators.indexOf(opponent) === -1) {
                 if (opponent === global.botUserID) {
                     autohost.sendMessage(username, "I don't know how to play the game! Don't try to 1v1 me please :crying:");
                     return;
@@ -500,7 +514,17 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: function (user, username, args, autohost) {
-            const commandList = Object.keys(commands);
+            const commandList = Object.keys(commands).filter(cmd => {
+                if (commands[cmd].devonly) {
+                    return isDeveloper(user);
+                } else if (commands[cmd].hostonly) {
+                    return isDeveloper(user) || (autohost.host === user);
+                } else if (commands[cmd].modonly) {
+                    return isDeveloper(user) || (autohost.host === user) || [...autohost.moderatorUsers.values()].indexOf(user) !== -1;
+                }
+
+                return true;
+            });
             commandList.sort();
             autohost.sendMessage(username, commandList.map(cmd => "!" + cmd).join(", "));
         }

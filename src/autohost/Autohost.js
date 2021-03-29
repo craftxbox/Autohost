@@ -43,10 +43,8 @@ class Autohost extends EventEmitter {
 
         this.ribbon = ribbon;
 
-        this.roomID = ribbon.room.id;
-
         this.ribbon.room.on("playersupdate", () => {
-            if (this.someoneDidJoin && this.ribbon.room.players.length === 0 && this.ribbon.room.spectators.length === 1) {
+            if (this.someoneDidJoin && this.ribbon.room.memberCount < 2) {
                 if (!this.persist) {
                     this.emit("end");
                 }
@@ -55,6 +53,9 @@ class Autohost extends EventEmitter {
             }
         });
 
+        this.ribbon.on("gmupdate", () => {
+            this.emit("configchange");
+        });
 
         this.ribbon.on("gmupdate.leave", leave => {
             const profile = this.playerData.get(leave);
@@ -170,10 +171,6 @@ class Autohost extends EventEmitter {
                 this.playerData.set(user._id, user);
                 this.usernamesToIds.set(user.username.toLowerCase(), user._id);
 
-                if (this.motd) {
-                    this.ribbon.sendChatMessage(this.motd);
-                }
-
                 if (join._id === this.host) {
                     this.ribbon.sendChatMessage(`Welcome to your room, ${join.username.toUpperCase()}!
                     
@@ -188,14 +185,14 @@ When you're ready to start, type !start.`);
                     const ineligibleMessage = checkAll(this.rules, user);
 
                     if (ineligibleMessage) {
-                        this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        this.ribbon.sendChatMessage(this.motd_ineligible ? this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
                     } else {
                         if (this.twoPlayerOpponent) {
                             this.getPlayerData(this.twoPlayerOpponent).then(opponent => {
-                                this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}. Type !queue to join the 1v1 queue against ${opponent.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                                this.ribbon.sendChatMessage(`Welcome, ${user.username.toUpperCase()}. Type !queue to join the 1v1 queue against ${opponent.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
                             });
                         } else {
-                            this.ribbon.sendChatMessage(`Welcome, ${join.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            this.ribbon.sendChatMessage(this.motd ? this.motd.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
                         }
                         return;
                     }
@@ -206,6 +203,10 @@ When you're ready to start, type !start.`);
                 }
             });
         });
+    }
+
+    get roomID() {
+        return this.ribbon.room.settings.id;
     }
 
     sendMessage(username, message) {
@@ -255,9 +256,7 @@ When you're ready to start, type !start.`);
         return Promise.all(this.ribbon.room.players.map(async player => {
             const playerData = await this.getPlayerData(player);
             if (this.twoPlayerOpponent ? this.check2pEligibility(player) : checkAll(this.rules, playerData)) {
-                if (this.ribbon.room.ingame) {
-                    this.ribbon.room.kickPlayer(player);
-                } else {
+                if (!this.ribbon.room.ingame) {
                     this.ribbon.room.switchPlayerBracket(player, "spectator");
                 }
             }

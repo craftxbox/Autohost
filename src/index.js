@@ -35,7 +35,7 @@ function getHostLobby(host) {
 }
 
 function restoreLobbies() {
-    redis.getAllLobbies().then(lobbies => {
+    return redis.getAllLobbies().then(lobbies => {
         console.log("Restoring " + lobbies.size + " lobbies.");
 
         lobbies.forEach((lobby, key) => {
@@ -48,6 +48,9 @@ function restoreLobbies() {
                 console.log(`Lobby ${key} skipped - missing critical data`);
                 return;
             }
+
+            // don't allow a new lobby to be created
+            sessions.set(key, true);
 
             const ribbon = new Ribbon(process.env.TOKEN);
 
@@ -70,7 +73,7 @@ function restoreLobbies() {
                 applyRoomEvents(ah, ribbon, lobby.host, key);
                 deserialise(lobby, ah);
 
-                sessions.set(lobby.host, ah);
+                sessions.set(key, ah);
             });
 
             ribbon.once("ready", () => {
@@ -127,8 +130,6 @@ function applyRoomEvents(ah, ribbon, host, id) {
 
 function createLobby(host, isPrivate, fixedID) {
     return new Promise((resolve, reject) => {
-        if (sessions.has(fixedID)) return;
-
         const ribbon = new Ribbon(process.env.TOKEN);
 
         ribbon.once("joinroom", () => {
@@ -244,19 +245,25 @@ api.getMe().then(user => {
         process.exit(0);
     });
 
-    restoreLobbies();
+    restoreLobbies().then(() => {
+        if (sessions.has("persistLobby_S")) return;
 
-    createLobby(botUserID, false, "persistLobby_S").then(ah => {
-        ah.persist = true;
+        createLobby(botUserID, false, "persistLobby_S").then(ah => {
+            ah.persist = true;
 
-        ah.ribbon.room.setName("[AUTO] S AND BELOW ONLY");
+            ah.ribbon.room.setName("[AUTO] S AND BELOW ONLY");
+            ah.ribbon.room.setRoomID("NOOBROOM");
 
-        ah.motd = "This is an unattended room. Contact Zudo (Zudo#0800 on Discord) if there are any issues.";
-        ah.rules.anons_allowed = false;
-        ah.rules.unranked_allowed = false;
-        ah.rules.max_rank = "s";
-        ah.autostart = 10;
+            ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
+            ah.motd_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
+            ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
+            ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill.";
+            ah.rules.anons_allowed = false;
+            ah.rules.max_rank = "s";
 
-        ah.emit("configchange");
+            ah.autostart = 10;
+
+            ah.emit("configchange");
+        });
     });
 });

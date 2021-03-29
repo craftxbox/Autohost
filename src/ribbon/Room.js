@@ -63,6 +63,10 @@ class Room extends EventEmitter {
         return [...this.playerBrackets].filter(bracket => bracket[1] === "spectator").map(bracket => bracket[0]);
     }
 
+    get memberCount() {
+        return this.playerBrackets.size;
+    }
+
     setRoomConfig(data) {
         this.ribbon.sendMessage({
             command: "updateconfig",
@@ -103,6 +107,10 @@ class Room extends EventEmitter {
 
     start() {
         this.ribbon.sendMessage({command: "startroom"});
+    }
+
+    setRoomID(id) {
+        this.ribbon.sendMessage({command: "setroomid", data: id});
     }
 }
 

@@ -116,7 +116,6 @@ class Ribbon extends EventEmitter {
                     socketid: this.socket_id,
                     resumetoken: this.resume_token
                 });
-                console.log(this.send_history);
                 this.sendMessageImmediate({command: "hello", packets: this.send_history.concat(this.send_queue)});
                 this.migrating = false;
             } else {

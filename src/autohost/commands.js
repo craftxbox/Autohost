@@ -38,7 +38,7 @@ const commands = {
             }
 
             const playerData = await autohost.getPlayerData(args[0]);
-            const staff = ["admin", "moderator"].indexOf(playerData.role) !== -1;
+            const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
             const kickRecipient = playerData._id;
 
             if (staff) {
@@ -95,7 +95,7 @@ const commands = {
             }
 
             const playerData = await autohost.getPlayerData(args[0]);
-            const staff = ["admin", "moderator"].indexOf(playerData.role) !== -1;
+            const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
             const banRecipient = playerData._id;
 
             if (staff) {
@@ -527,6 +527,7 @@ const commands = {
             });
             commandList.sort();
             autohost.sendMessage(username, commandList.map(cmd => "!" + cmd).join(", "));
+            autohost.sendMessage(username, "Overwhelmed? Visit https://kagar.in/autohost for the full documentation.")
         }
     },
     set: {

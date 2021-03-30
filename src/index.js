@@ -68,7 +68,7 @@ function restoreLobbies() {
 
                 const ah = new Autohost(ribbon, undefined, lobby.isPrivate);
 
-                ribbon.sendChatMessage("Room settings have been restored.");
+                ribbon.sendChatMessage("The bot was disconnected from TETR.IO, or was rebooted. The room settings have been restored.");
 
                 applyRoomEvents(ah, ribbon, lobby.host, key);
                 deserialise(lobby, ah);

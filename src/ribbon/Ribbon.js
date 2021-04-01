@@ -3,7 +3,7 @@ const msgpack = require("msgpack-lite");
 const EventEmitter = require("events");
 const Room = require("./Room");
 
-const CLIENT_VERSION = {"id": "3876ada", "time": 1616779398000};
+const CLIENT_VERSION = {"id":"2d05c95","time":1617227309000};
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
 const RIBBON_PREFIXES = {

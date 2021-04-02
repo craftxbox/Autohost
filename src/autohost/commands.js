@@ -438,7 +438,7 @@ const commands = {
 
             const opponent = await autohost.getUserID(args[0]);
 
-            if (autohost.ribbon.room.players.indexOf(opponent) !== -1 && autohost.ribbon.room.spectators.indexOf(opponent) !== -1) {
+            if (autohost.ribbon.room.players.indexOf(opponent) !== -1 || autohost.ribbon.room.spectators.indexOf(opponent) !== -1) {
                 if (opponent === global.botUserID) {
                     autohost.sendMessage(username, "I don't know how to play the game! Don't try to 1v1 me please :crying:");
                     return;

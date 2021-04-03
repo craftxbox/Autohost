@@ -446,7 +446,7 @@ const commands = {
 
                 autohost.twoPlayerOpponent = opponent;
                 autohost.twoPlayerChallenger = undefined;
-                autohost.twoPlayerQueue = [];
+                autohost.twoPlayerQueue = autohost.twoPlayerQueue.filter(player => player !== opponent); // remove the new opponent if they're in the queue
                 autohost.sendMessage(username, `1v1 matchups are now against ${args[0].toUpperCase()}. Type !queue to join.`);
                 if (oldOpponent) {
                     autohost.ribbon.room.switchPlayerBracket(oldOpponent, "spectator");
@@ -557,6 +557,15 @@ const commands = {
             const name = args.join(" ");
             autohost.ribbon.room.setName(name);
             autohost.sendMessage(username, "Room name updated.");
+        }
+    },
+    clearqueue: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            autohost.twoPlayerQueue = [];
+            autohost.sendMessage(username, "Cleared the queue.");
         }
     }
 };

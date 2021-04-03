@@ -558,6 +558,15 @@ const commands = {
             autohost.ribbon.room.setName(name);
             autohost.sendMessage(username, "Room name updated.");
         }
+    },
+    clearqueue: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            autohost.twoPlayerQueue = [];
+            autohost.sendMessage(username, "Cleared the queue.");
+        }
     }
 };
 

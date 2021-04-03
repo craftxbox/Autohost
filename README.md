@@ -53,6 +53,7 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |!autostart|`<time in seconds>`|Set the autostart timer, to automatically start the game when enough players are ready.|
 |!ban|`<username>`|Bans a player from the lobby for the remainder of the session.|
 |!cancelstart| |Cancels a pending autostart.|
+|!clearqueue| |Clears the 1v1 queue while keeping the current opponent and challenger.|
 |!hostmode| |Toggles host mode. This temporarily gives you control over the room to change any settings you want.|
 |!kick|`<username>`|Kicks a player from the lobby.|
 |!opponent|`<username>`|Enable 1v1 mode, and sets `<username>` as the opponent.|

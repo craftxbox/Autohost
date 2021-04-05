@@ -18,17 +18,30 @@ const RULES = {
             return `Anonymous players allowed: ${value ? ":checked:" : ":crossed:"}`;
         }
     },
-    unranked_allowed: {
+    unrated_allowed: {
+        type: Boolean,
+        default: true,
+        check(value, user) {
+            return !value && user.league.percentile_rank === "z"
+        },
+        message() {
+            return "Players without a TR rating cannot play in this room";
+        },
+        description(value) {
+            return `Unrated players allowed: ${value ? ":checked:" : ":crossed:"}`;
+        }
+    },
+    rankless_allowed: {
         type: Boolean,
         default: true,
         check(value, user) {
             return !value && user.league.rank === "z"
         },
         message() {
-            return "Unranked players cannot play in this room";
+            return "Players without a rank cannot play in this room";
         },
         description(value) {
-            return `Unranked players allowed: ${value ? ":checked:" : ":crossed:"}`;
+            return `Rankless players allowed: ${value ? ":checked:" : ":crossed:"}`;
         }
     },
     max_rank: {
@@ -52,7 +65,7 @@ const RULES = {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
-            return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value)
+            return value !== "z" && user.league.rank !== "z" && RANK_HIERARCHY.indexOf(user.league.rank) < RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
             return `Your TR is too low for this room (minimum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`
@@ -83,9 +96,19 @@ const RULES = {
 function checkAll(ruleset, user) {
     for (const rule in RULES) {
         if (RULES.hasOwnProperty(rule)) {
-            const {check, message} = RULES[rule];
-            if (check(ruleset[rule], user)) {
-                return message(ruleset[rule], user);
+            // default is a reserved keyword lol
+            const {check, message, default: defaultValue} = RULES[rule];
+
+            let value;
+
+            if (ruleset.hasOwnProperty(rule)) {
+                value = ruleset[rule];
+            } else {
+                value = defaultValue;
+            }
+
+            if (check(value, user)) {
+                return message(value, user);
             }
         }
     }

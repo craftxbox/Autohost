@@ -92,6 +92,8 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |`unrated_allowed`|Whether unrated players (those who haven't completed 10 Tetra League matches) are allowed to play|Yes|
 |`rankless_allowed`|Whether rankless players (those with a TR, but with a RD over 100) are allowed to play|Yes|
 |`max_rank`|The maximum rank (TR equivalent) allowed in the lobby|
+|`min_rank`|The minimum rank (TR equivalent) allowed in the lobby|
+|`min_level`|The minimum level allowed in the lobby|
 
 ## Found a bug?
 

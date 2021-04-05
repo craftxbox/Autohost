@@ -1,7 +1,8 @@
 ## ⚠⚠⚠ BIG SCARY DISCLAIMER ⚠⚠⚠
 
 The source code is here to allow you to contribute to development and (perhaps) to learn. It's **NOT** for making
-unauthorised bots. Ask osk for permission before connecting to TETR.IO with anything other than the official client.
+unauthorised bots. Ask osk for permission before connecting to TETR.IO with anything other than the official client -
+and please don't make a request without properly thinking it through first.
 
 99.9% of players **don't** need to try running the code themselves.
 
@@ -83,6 +84,15 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |---|---|---|
 |!persist| |Toggle persist mode for a lobby.|
 
+## Available rules
+
+|Rule|Description|Default|
+|---|---|---|
+|`anons_allowed`|Whether anonymous players (players without an account) are allowed to play|Yes|
+|`unrated_allowed`|Whether unrated players (those who haven't completed 10 Tetra League matches) are allowed to play|Yes|
+|`rankless_allowed`|Whether rankless players (those with a TR, but with a RD over 100) are allowed to play|Yes|
+|`max_rank`|The maximum rank (TR equivalent) allowed in the lobby|
+
 ## Found a bug?
 
 Please open an [issue](https://github.com/ZudoB/autohost/issues/new) or submit a pull request. Alternatively, send me a
@@ -90,5 +100,5 @@ message on Discord (`Zudo#0800`)
 
 ## Want to support the project?
 
-**Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do. However, I
-do have a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to help with hosting costs. 
+**Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do. However,
+I do have a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to help with hosting costs. 

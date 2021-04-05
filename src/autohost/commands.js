@@ -176,8 +176,8 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: function (user, username, args, autohost) {
-            autohost.sendMessage(username, "Current rules:\n\n" + Object.keys(autohost.rules).map(rule => {
-                return RULES[rule].description(autohost.rules[rule])
+            autohost.sendMessage(username, "Current rules:\n\n" + Object.keys(RULES).map(rule => {
+                return RULES[rule].description(autohost.rules[rule] || RULES[rule].default);
             }).join("\n"));
         }
     },

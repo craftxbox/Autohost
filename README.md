@@ -101,4 +101,9 @@ message on Discord (`Zudo#0800`)
 ## Want to support the project?
 
 **Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do. However,
-I do have a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to help with hosting costs. 
+I do have a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to help with hosting costs.
+
+## Acknowledgements
+
+Special thanks goes out to Poyo for [documenting the Ribbon](https://github.com/Poyo-SSB/tetrio-bot-docs), craftxbox for
+the initial idea, and to the many people who have helped test Autohost.

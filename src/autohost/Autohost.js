@@ -31,13 +31,7 @@ class Autohost extends EventEmitter {
 
         this.warnings = {};
 
-        this.rules = {
-            anons_allowed: true,
-            unranked_allowed: true,
-            min_level: 0,
-            min_rank: "z",
-            max_rank: "z"
-        };
+        this.rules = {};
 
         this.autostart = 0;
 

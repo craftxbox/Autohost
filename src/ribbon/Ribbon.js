@@ -2,8 +2,9 @@ const WebSocket = require("ws");
 const msgpack = require("msgpack-lite");
 const EventEmitter = require("events");
 const Room = require("./Room");
+const api = require("../gameapi/api");
 
-const CLIENT_VERSION = {"id": "3876ada", "time": 1616779398000};
+const CLIENT_VERSION = {"id": "2d05c95", "time": 1617227309000};
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
 const RIBBON_PREFIXES = {
@@ -21,11 +22,11 @@ const PING_PONG = {
 function ribbonDecode(packet) {
     switch (packet[0]) {
         case RIBBON_PREFIXES.STANDARD:
-            return [msgpack.decode(packet.slice(c))];
+            return [msgpack.decode(packet.slice(1))];
         case RIBBON_PREFIXES.EXTRACTED_ID:
-            const message = msgpack.decode(packet.slice(c+4));
+            const message = msgpack.decode(packet.slice(5));
             const view = new DataView(packet.buffer);
-            message.id = view.getUint32(c, false); // shove it back in
+            message.id = view.getUint32(1, false); // shove it back in
             return [message];
         case RIBBON_PREFIXES.BATCH:
             const items = [];
@@ -45,7 +46,7 @@ function ribbonDecode(packet) {
             // Get the items at those lengths
             let pointer = 0;
             for (let i = 0; i < lengths.length; i++) {
-                items.push(packet.slice(1 + (lengths.length * 4) + 4 + pointer, c + (lengths.length * 4) + 4 + pointer + lengths[i]));
+                items.push(packet.slice(1 + (lengths.length * 4) + 4 + pointer, 1 + (lengths.length * 4) + 4 + pointer + lengths[i]));
                 pointer += lengths[i];
             }
 
@@ -63,9 +64,9 @@ function ribbonDecode(packet) {
 
 function ribbonEncode(message) { // todo: perhaps we should actually follow tetrio.js implementation here?
     const msgpacked = msgpack.encode(message);
-    const packet = new Uint8Array(msgpacked.length + c);
+    const packet = new Uint8Array(msgpacked.length + 1);
     packet.set([RIBBON_PREFIXES.STANDARD], 0);
-    packet.set(msgpacked, c);
+    packet.set(msgpacked, 1);
 
     return packet;
 }
@@ -88,7 +89,12 @@ class Ribbon extends EventEmitter {
         this.send_queue = [];
         this.lastSent = 0;
 
-        this.connect(RIBBON_ENDPOINT);
+        api.getRibbonEndpoint().then(endpoint => {
+            this.connect(endpoint);
+        }).catch(() => {
+            this.log("Failed to get the ribbon endpoint, using the default instead");
+            this.connect(RIBBON_ENDPOINT);
+        });
     }
 
     connect(endpoint) {

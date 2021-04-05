@@ -303,6 +303,10 @@ class Ribbon extends EventEmitter {
         this.sendMessage({command: "social.dm", data: {recipient, msg: message}});
     }
 
+    ackDM(recipient) {
+        this.sendMessage({command: "social.relationships.ack", data: recipient});
+    }
+
     sendChatMessage(message) {
         this.sendMessage({command: "chat", data: message});
     }

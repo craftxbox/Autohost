@@ -230,6 +230,9 @@ api.getMe().then(user => {
         } else {
             botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");
         }
+
+        // clear notification panel spam
+        botMain.ackDM(user);
     });
 
     process.on("SIGINT", () => {

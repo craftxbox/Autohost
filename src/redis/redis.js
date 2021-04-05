@@ -40,7 +40,7 @@ function getAllLobbies() {
             if (err) return reject(err);
 
             if (res) {
-                resolve(new Map(Object.entries(res).map(entry => [entry[0], JSON.parse(entry[c])])));
+                resolve(new Map(Object.entries(res).map(entry => [entry[0], JSON.parse(entry[1])])));
             } else {
                 resolve(new Map());
             }

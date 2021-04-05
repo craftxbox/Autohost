@@ -34,7 +34,7 @@ class Room extends EventEmitter {
         });
 
         this.ribbon.on("gmupdate.host", host => {
-            this.isHost = host === "6050cb9c39e123c9aebdf320"; // todo: pull from api
+            this.isHost = host === botUserID;
         });
 
         this.ribbon.on("gmupdate.leave", id => {

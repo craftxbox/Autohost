@@ -129,7 +129,7 @@ function applyRoomEvents(ah, ribbon, host, id) {
 }
 
 function createLobby(host, isPrivate, fixedID) {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
         const ribbon = new Ribbon(process.env.TOKEN);
 
         ribbon.once("joinroom", () => {
@@ -143,7 +143,7 @@ function createLobby(host, isPrivate, fixedID) {
 
             const config = serialise(ah);
 
-            redis.setLobby(host, config).then(() => {
+            redis.setLobby(id, config).then(() => {
                 console.log("Saved initial lobby settings for " + host);
             });
 
@@ -230,6 +230,9 @@ api.getMe().then(user => {
         } else {
             botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");
         }
+
+        // clear notification panel spam
+        botMain.ackDM(user);
     });
 
     process.on("SIGINT", () => {
@@ -246,7 +249,7 @@ api.getMe().then(user => {
     });
 
     restoreLobbies().then(() => {
-        if (sessions.has("persistLobby_S")) return;
+        if (sessions.has("persistLobby_S") || process.env.PERSIST_ROOMS_DISABLED) return;
 
         createLobby(botUserID, false, "persistLobby_S").then(ah => {
             ah.persist = true;
@@ -258,6 +261,8 @@ api.getMe().then(user => {
             ah.motd_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
             ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
             ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill.";
+
+            ah.rules.unrated_allowed = false;
             ah.rules.anons_allowed = false;
             ah.rules.max_rank = "s";
 

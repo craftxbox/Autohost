@@ -9,6 +9,7 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
+            // check: option set AND user is anon
             return !value && user.role === "anon";
         },
         message() {
@@ -18,23 +19,39 @@ const RULES = {
             return `Anonymous players allowed: ${value ? ":checked:" : ":crossed:"}`;
         }
     },
-    unranked_allowed: {
+    unrated_allowed: {
         type: Boolean,
         default: true,
         check(value, user) {
+            // check: unrated NOT allowed AND *percentile* rank is unranked
+            return !value && user.league.percentile_rank === "z"
+        },
+        message() {
+            return "Players who have not completed their Tetra League rating games cannot play in this room";
+        },
+        description(value) {
+            return `Unrated players allowed: ${value ? ":checked:" : ":crossed:"}`;
+        }
+    },
+    rankless_allowed: {
+        type: Boolean,
+        default: true,
+        check(value, user) {
+            // check: rankless NOT allowed AND rank is unranked
             return !value && user.league.rank === "z"
         },
         message() {
-            return "Unranked players cannot play in this room";
+            return "Players without a rank letter cannot play in this room";
         },
         description(value) {
-            return `Unranked players allowed: ${value ? ":checked:" : ":crossed:"}`;
+            return `Rankless players allowed: ${value ? ":checked:" : ":crossed:"}`;
         }
     },
     max_rank: {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
+            // check: option set AND user has a TR AND percentile rank > max
             return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) > RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
@@ -52,6 +69,7 @@ const RULES = {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
+            // check: option set AND user has a TR AND percentile rank < min
             return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
@@ -69,6 +87,7 @@ const RULES = {
         type: Number,
         default: 0,
         check(value, user) {
+            // check: option set AND level < min
             return value !== 0 && xpToLevel(user.xp) < value;
         },
         message(value) {
@@ -83,9 +102,19 @@ const RULES = {
 function checkAll(ruleset, user) {
     for (const rule in RULES) {
         if (RULES.hasOwnProperty(rule)) {
-            const {check, message} = RULES[rule];
-            if (check(ruleset[rule], user)) {
-                return message(ruleset[rule], user);
+            // default is a reserved keyword lol
+            const {check, message, default: defaultValue} = RULES[rule];
+
+            let value;
+
+            if (ruleset.hasOwnProperty(rule)) {
+                value = ruleset[rule];
+            } else {
+                value = defaultValue;
+            }
+
+            if (check(value, user)) {
+                return message(value, user);
             }
         }
     }

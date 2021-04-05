@@ -258,6 +258,8 @@ api.getMe().then(user => {
             ah.motd_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
             ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
             ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill.";
+
+            ah.rules.unrated_allowed = false;
             ah.rules.anons_allowed = false;
             ah.rules.max_rank = "s";
 

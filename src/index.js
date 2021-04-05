@@ -143,7 +143,7 @@ function createLobby(host, isPrivate, fixedID) {
 
             const config = serialise(ah);
 
-            redis.setLobby(host, config).then(() => {
+            redis.setLobby(id, config).then(() => {
                 console.log("Saved initial lobby settings for " + host);
             });
 

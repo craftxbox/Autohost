@@ -129,7 +129,7 @@ function applyRoomEvents(ah, ribbon, host, id) {
 }
 
 function createLobby(host, isPrivate, fixedID) {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
         const ribbon = new Ribbon(process.env.TOKEN);
 
         ribbon.once("joinroom", () => {
@@ -246,7 +246,7 @@ api.getMe().then(user => {
     });
 
     restoreLobbies().then(() => {
-        if (sessions.has("persistLobby_S")) return;
+        if (sessions.has("persistLobby_S") || process.env.PERSIST_ROOMS_DISABLED) return;
 
         createLobby(botUserID, false, "persistLobby_S").then(ah => {
             ah.persist = true;

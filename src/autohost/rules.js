@@ -9,6 +9,7 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
+            // check: option set AND user is anon
             return !value && user.role === "anon";
         },
         message() {
@@ -22,10 +23,11 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
+            // check: unrated NOT allowed AND *percentile* rank is unranked
             return !value && user.league.percentile_rank === "z"
         },
         message() {
-            return "Players without a TR rating cannot play in this room";
+            return "Players who have not completed their Tetra League rating games cannot play in this room";
         },
         description(value) {
             return `Unrated players allowed: ${value ? ":checked:" : ":crossed:"}`;
@@ -35,10 +37,11 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
+            // check: rankless NOT allowed AND rank is unranked
             return !value && user.league.rank === "z"
         },
         message() {
-            return "Players without a rank cannot play in this room";
+            return "Players without a rank letter cannot play in this room";
         },
         description(value) {
             return `Rankless players allowed: ${value ? ":checked:" : ":crossed:"}`;
@@ -48,6 +51,7 @@ const RULES = {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
+            // check: option set AND user has a TR AND percentile rank > max
             return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) > RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
@@ -65,7 +69,8 @@ const RULES = {
         type: RANK_HIERARCHY,
         default: "z",
         check(value, user) {
-            return value !== "z" && user.league.rank !== "z" && RANK_HIERARCHY.indexOf(user.league.rank) < RANK_HIERARCHY.indexOf(value)
+            // check: option set AND user has a TR AND percentile rank < min
+            return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value)
         },
         message(value) {
             return `Your TR is too low for this room (minimum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`
@@ -82,6 +87,7 @@ const RULES = {
         type: Number,
         default: 0,
         check(value, user) {
+            // check: option set AND level < min
             return value !== 0 && xpToLevel(user.xp) < value;
         },
         message(value) {

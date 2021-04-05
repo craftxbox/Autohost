@@ -29,7 +29,7 @@ class Autohost extends EventEmitter {
         this.twoPlayerChallenger = undefined;
         this.twoPlayerQueue = [];
 
-        this.warnings = {};
+        this.bracketSwapWarnedPlayers = {};
 
         this.rules = {};
 
@@ -54,7 +54,7 @@ class Autohost extends EventEmitter {
         this.ribbon.on("gmupdate.leave", leave => {
             const profile = this.playerData.get(leave);
 
-            this.warnings[leave] = 0;
+            this.bracketSwapWarnedPlayers[leave] = 0;
 
             if (profile) {
                 this.usernamesToIds.delete(profile.username.toLowerCase());
@@ -78,26 +78,23 @@ class Autohost extends EventEmitter {
         });
 
         this.ribbon.on("gmupdate.bracket", async update => {
-            if (!this.ribbon.room.isHost || this.host === update.uid || update.bracket === "spectator") return;
+            if (!this.ribbon.room.isHost || update.bracket === "spectator") return;
 
             const playerData = await this.getPlayerData(update.uid);
             const ineligibleMessage = this.twoPlayerOpponent ? this.check2pEligibility(update.uid) : checkAll(this.rules, playerData);
 
             if (ineligibleMessage) {
-                const warnings = this.warnings.hasOwnProperty(update.uid) ? this.warnings[update.uid] + 1 : 1;
-                this.warnings[update.uid] = warnings;
-                if (warnings === 1) {
-                    this.sendMessage(playerData.username, `${ineligibleMessage}. Please don't try to switch to players.`);
-                } else if (warnings === 2) {
-                    this.sendMessage(playerData.username, "Please don't try to switch to players, or you will be kicked from the lobby.");
-                } else if (warnings === 3) {
-                    this.sendMessage(playerData.username, "Final warning: you will be kicked if you try to switch to players again.");
-                } else if (warnings === 4) {
-                    this.ribbon.room.kickPlayer(update.uid);
-                    return;
-                }
-
                 this.ribbon.room.switchPlayerBracket(update.uid, "spectator");
+
+                if (this.bracketSwapWarnedPlayers[update.uid]) return;
+
+                this.bracketSwapWarnedPlayers[update.uid] = true;
+
+                setTimeout(() => {
+                    this.bracketSwapWarnedPlayers[update.uid] = false;
+                }, 10000);
+
+                this.sendMessage(playerData.username, `${ineligibleMessage}.`);
             }
         });
 

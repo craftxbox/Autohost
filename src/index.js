@@ -60,6 +60,11 @@ function restoreLobbies() {
                         console.log(`Room ${key} no longer exists, deleting.`);
                     });
                     ribbon.disconnectGracefully();
+                } else if (error === "you are already in this room") {
+                    console.log("Server thinks we're still in the lobby, trying again in 5...");
+                    setTimeout(() => {
+                        ribbon.joinRoom(lobby.roomID);
+                    }, 5000);
                 }
             })
 
@@ -109,16 +114,8 @@ function applyRoomEvents(ah, ribbon, host, id) {
         });
     });
 
-    ribbon.on("kick", () => {
-        ribbon.disconnectGracefully();
-        sessions.delete(id);
-
-        setTimeout(() => {
-            restoreLobbies();
-        }, 5000);
-    });
-
-    ribbon.on("nope", () => {
+    ribbon.on("dead", () => {
+        console.log("Ribbon died! Attempting restore.");
         ribbon.disconnectGracefully();
         sessions.delete(id);
 
@@ -254,7 +251,7 @@ api.getMe().then(user => {
         createLobby(botUserID, false, "persistLobby_S").then(ah => {
             ah.persist = true;
 
-            ah.ribbon.room.setName("[AUTO] S AND BELOW ONLY");
+            ah.ribbon.room.setName("S AND BELOW ONLY");
             ah.ribbon.room.setRoomID("NOOBROOM");
 
             ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";

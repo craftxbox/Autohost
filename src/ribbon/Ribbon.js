@@ -77,20 +77,24 @@ class Ribbon extends EventEmitter {
     constructor(token) {
         super();
 
+        this.lastEndpoint = RIBBON_ENDPOINT;
+
         this.token = token;
         this.dead = false;
         this.open = false;
+        this.authed = false;
 
         this.room = undefined;
 
         this.migrating = false;
 
-        this.send_history = [];
-
-        this.send_queue = [];
+        this.sendHistory = [];
+        this.sendQueue = [];
         this.lastSent = 0;
+        this.lastReceived = -99;
 
         api.getRibbonEndpoint().then(endpoint => {
+            this.lastEndpoint = endpoint;
             this.connect(endpoint);
         }).catch(() => {
             this.log("Failed to get the ribbon endpoint, using the default instead");
@@ -123,13 +127,14 @@ class Ribbon extends EventEmitter {
                     socketid: this.socket_id,
                     resumetoken: this.resume_token
                 });
-                this.sendMessageImmediate({command: "hello", packets: this.send_history.concat(this.send_queue)});
+                this.sendMessageImmediate({command: "hello", packets: this.sendHistory});
                 this.migrating = false;
             } else {
                 this.sendMessageImmediate({command: "new"});
             }
 
             this.pingInterval = setInterval(() => {
+                if (this.ws.readyState !== 1) return;
                 this.ws.send(new Uint8Array([RIBBON_PREFIXES.PING_PONG, PING_PONG.PING]));
             }, 5000);
         });
@@ -146,7 +151,7 @@ class Ribbon extends EventEmitter {
 
             if (!this.dead) {
                 setTimeout(() => {
-                    this.connect(RIBBON_ENDPOINT);
+                    this.connect(this.lastEndpoint);
                 }, 5000);
             }
         });
@@ -159,7 +164,7 @@ class Ribbon extends EventEmitter {
 
             if (!this.dead) {
                 setTimeout(() => {
-                    this.connect(RIBBON_ENDPOINT);
+                    this.connect(this.lastEndpoint);
                 }, 5000);
             }
         });
@@ -171,28 +176,23 @@ class Ribbon extends EventEmitter {
 
     sendMessageImmediate(message) {
         if (process.env.DUMP_RIBBON) {
-            this.log("OUT " + message.command);
+            this.log("OUT " + JSON.stringify(message));
         }
         this.ws.send(ribbonEncode(message));
-        this.send_history.push(message);
-
-        if (this.send_history.length > 500) {
-            this.send_history.splice(0, this.send_history.length - 500);
-        }
     }
 
     flushQueue() {
         if (!this.open) return;
-        const messageCount = this.send_queue.length;
+        const messageCount = this.sendQueue.length;
         for (let i = 0; i < messageCount; i++) {
-            const message = this.send_queue.shift();
-            this.lastSent++;
-            message.id = this.lastSent;
+            const message = this.sendQueue.shift();
             this.sendMessageImmediate(message);
         }
     }
 
     die() {
+        if (this.dead) return;
+
         this.dead = true;
 
         if (this.ws) {
@@ -211,13 +211,35 @@ class Ribbon extends EventEmitter {
         if (process.env.DUMP_RIBBON) {
             this.log("PUSH " + message.command);
         }
-        this.send_queue.push(message);
+        this.lastSent++;
+        message.id = this.lastSent;
+        this.sendQueue.push(message);
+        this.sendHistory.push(message);
+        if (this.sendQueue.length >= 500) {
+            this.sendHistory.shift();
+        }
         this.flushQueue();
     }
 
     handleMessageInternal(message) {
         if (message.command !== "pong" && process.env.DUMP_RIBBON) {
             this.log("IN " + JSON.stringify(message));
+        }
+
+        if (message.type === "Buffer") {
+            this.log("Encountered a Buffer message");
+            const packet = Buffer.from(message.data);
+            const message = ribbonDecode(packet);
+            this.handleMessageInternal(message);
+        }
+
+        if (message.command !== "hello" && message.id) {
+            this.log(message.id + " " + this.lastReceived);
+            if (message.id > this.lastReceived) {
+                this.lastReceived = message.id;
+            } else {
+                return;
+            }
         }
 
         switch (message.command) {
@@ -228,33 +250,37 @@ class Ribbon extends EventEmitter {
                 break;
             case "nope":
                 this.log("Ribbon noped out! " + JSON.stringify(message));
+                this.emit("nope", message.data);
                 this.die();
                 break;
             case "hello":
                 this.socket_id = message.id;
                 this.resume_token = message.resume;
 
-                this.sendMessageImmediate({ // auth the client
-                    command: "authorize",
-                    id: this.lastSent,
-                    data: {
-                        token: this.token,
-                        handling: {
-                            arr: 0,
-                            das: 0,
-                            sdf: 0,
-                            safelock: false
-                        },
-                        signature: {
-                            commit: CLIENT_VERSION
+                if (!this.authed) {
+                    this.sendMessageImmediate({ // auth the client
+                        command: "authorize",
+                        id: this.lastSent,
+                        data: {
+                            token: this.token,
+                            handling: {
+                                arr: 0,
+                                das: 0,
+                                sdf: 0,
+                                safelock: false
+                            },
+                            signature: {
+                                commit: CLIENT_VERSION
+                            }
                         }
-                    }
-                });
+                    });
+                }
 
-                message.packets.forEach(p => this.handleMessage(p)); // handle any dropped clients
+                message.packets.forEach(p => this.handleMessageInternal(p)); // handle any dropped messages
                 break;
             case "authorize":
                 if (message.data.success) {
+                    this.authed = true;
                     this.emit("ready");
                 } else {
                     this.die();

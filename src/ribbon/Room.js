@@ -9,36 +9,31 @@ class Room extends EventEmitter {
         this.settings = settings;
 
         this.ingame = false;
-        this.isHost = true;
-
-        this.playerBrackets = new Map();
 
         this.ribbon.on("gmupdate", settings => {
             this.settings = settings;
-
-            this.playerBrackets.clear();
-
-            settings.players.forEach(player => {
-                this.playerBrackets.set(player._id, player.bracket);
-            });
         });
 
         this.ribbon.on("gmupdate.join", join => {
-            this.playerBrackets.set(join._id, join.bracket);
+            this.settings.players.push(join);
             this.emit("playersupdate");
         });
 
         this.ribbon.on("gmupdate.bracket", bracket => {
-            this.playerBrackets.set(bracket.uid, bracket.bracket);
+            const idx = this.settings.players.findIndex(player => player._id === bracket.uid);
+            const player = this.settings.players[idx];
+            player.bracket = bracket.bracket;
+            this.settings.players[idx] = player;
             this.emit("playersupdate");
         });
 
         this.ribbon.on("gmupdate.host", host => {
-            this.isHost = host === botUserID;
+            this.settings.owner = host;
         });
 
         this.ribbon.on("gmupdate.leave", id => {
-            this.playerBrackets.delete(id);
+            const idx = this.settings.players.findIndex(player => player._id === id);
+            this.settings.players.splice(idx, 1);
             this.emit("playersupdate");
         });
 
@@ -51,20 +46,24 @@ class Room extends EventEmitter {
         });
     }
 
+    get isHost() {
+        return this.settings.owner === botUserID;
+    }
+
     get id() {
         return this.settings.id;
     }
 
     get players() {
-        return [...this.playerBrackets].filter(bracket => bracket[1] === "player").map(bracket => bracket[0]);
+        return this.settings.players.filter(player => player.bracket === "player").map(player => player._id);
     }
 
     get spectators() {
-        return [...this.playerBrackets].filter(bracket => bracket[1] === "spectator").map(bracket => bracket[0]);
+        return this.settings.players.filter(player => player.bracket === "spectator").map(player => player._id);
     }
 
     get memberCount() {
-        return this.playerBrackets.size;
+        return this.settings.players.length;
     }
 
     setRoomConfig(data) {

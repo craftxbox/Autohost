@@ -234,7 +234,6 @@ class Ribbon extends EventEmitter {
         }
 
         if (message.command !== "hello" && message.id) {
-            this.log(message.id + " " + this.lastReceived);
             if (message.id > this.lastReceived) {
                 this.lastReceived = message.id;
             } else {

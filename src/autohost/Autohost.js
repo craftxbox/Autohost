@@ -38,7 +38,6 @@ class Autohost extends EventEmitter {
         this.ribbon = ribbon;
 
         this.ribbon.room.on("playersupdate", () => {
-            console.log(this.ribbon.room.memberCount);
             if (this.ribbon.room.memberCount === 1 && !this.persist && this.someoneDidJoin) {
                 this.emit("end");
             } else {

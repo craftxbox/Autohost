@@ -51,6 +51,7 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 
 |Command|Arguments|Description|
 |---|---|---|
+|!allow|`<username>`|Allows a player to participate, overriding the room rules.|
 |!autostart|`<time in seconds>`|Set the autostart timer, to automatically start the game when enough players are ready.|
 |!ban|`<username>`|Bans a player from the lobby for the remainder of the session.|
 |!cancelstart| |Cancels a pending autostart.|
@@ -64,6 +65,7 @@ Click the newly appeared **Message** button, then send any message to the bot - 
 |!sethost|`<username>`|Transfer host privileges to another player.|
 |!setrule|`<rule> <value>`|Sets a participation rule. Type `!setrule` without any arguments to see a list.|
 |!start| |Starts the game.|
+|!unallow|`<username>`|Removes a player from the allow list, subjecting them to the room rules again.|
 |!unban|`<username>`|Unbans a previously banned player.|
 |!unset|`<rule>`|Unsets a participation rule.|
 

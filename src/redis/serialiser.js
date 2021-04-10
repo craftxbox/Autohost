@@ -4,6 +4,7 @@ function serialise(autohost) {
     data.host = autohost.host;
     data.bannedUsers = [...autohost.bannedUsers];
     data.moderatorUsers = [...autohost.moderatorUsers];
+    data.allowedUsers = [...autohost.allowedUsers];
     data.twoPlayerChallenger = autohost.twoPlayerChallenger;
     data.twoPlayerOpponent = autohost.twoPlayerOpponent;
     data.twoPlayerQueue = autohost.twoPlayerQueue;
@@ -24,6 +25,7 @@ function deserialise(data, target) {
     target.host = data.host;
     target.bannedUsers = new Map(data.bannedUsers);
     target.moderatorUsers = new Map(data.moderatorUsers);
+    target.allowedUsers = new Map(data.allowedUsers);
     target.rules = data.rules;
     target.roomID = data.roomID;
     target.isPrivate = data.isPrivate;

@@ -38,16 +38,17 @@ const commands = {
             }
 
             const playerData = await autohost.getPlayerData(args[0]);
-            const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
-            const kickRecipient = playerData._id;
+            const kickRecipient = playerData && playerData._id;
 
-            if (staff) {
-                autohost.sendMessage(username, "You cannot kick TETR.IO staff.");
+            if (!kickRecipient || autohost.ribbon.room.players.indexOf(kickRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(kickRecipient) === -1) {
+                autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
 
-            if (autohost.ribbon.room.players.indexOf(kickRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(kickRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
+            const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
+
+            if (staff) {
+                autohost.sendMessage(username, "You cannot kick TETR.IO staff.");
                 return;
             }
 
@@ -95,16 +96,17 @@ const commands = {
             }
 
             const playerData = await autohost.getPlayerData(args[0]);
-            const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
-            const banRecipient = playerData._id;
+            const banRecipient = playerData && playerData._id;
 
-            if (staff) {
-                autohost.sendMessage(username, "You cannot ban TETR.IO staff.");
+            if (!banRecipient || autohost.ribbon.room.players.indexOf(banRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(banRecipient) === -1) {
+                autohost.sendMessage(username, "That player is not in this lobby.");
                 return;
             }
 
-            if (autohost.ribbon.room.players.indexOf(banRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(banRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
+            const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
+
+            if (staff) {
+                autohost.sendMessage(username, "You cannot ban TETR.IO staff.");
                 return;
             }
 
@@ -243,10 +245,10 @@ const commands = {
         handler: function (user, username, args, autohost) {
             if (autohost.ribbon.room.isHost) {
                 autohost.ribbon.room.transferOwnership(user);
-                autohost.sendMessage(username, "You are now the room host. Change any settings you want, then do !hostmode again when you're done.");
+                autohost.sendMessage(username, "You are now the room host. Change any settings you want, then do !hostmode again before starting the game.");
             } else {
                 autohost.ribbon.room.takeOwnership();
-                autohost.sendMessage(username, "OK, I'm the host again.");
+                autohost.sendMessage(username, "OK, I'm the host again. Type !start when you're ready.");
             }
         }
     },
@@ -268,7 +270,7 @@ const commands = {
             }
 
             if (newHost === global.botUserID) {
-                autohost.sendMessage(username, "I'm always the host :woke:");
+                autohost.sendMessage(username, "I'm always the host, no need to give it to me. :woke:");
                 return;
             }
 
@@ -354,9 +356,11 @@ const commands = {
                 return;
             }
 
-            autohost.unbanPlayer(args[0]);
-
-            autohost.sendMessage(username, `Unbanned player ${args[0].toUpperCase()}.`);
+            if (autohost.unbanPlayer(args[0])) {
+                autohost.sendMessage(username, `Unbanned player ${args[0].toUpperCase()}.`);
+            } else {
+                autohost.sendMessage(username, `That player is not banned, check the spelling and try again.`);
+            }
 
             autohost.emit("configchange");
         }
@@ -383,6 +387,11 @@ const commands = {
                 return;
             }
 
+            if (isDeveloper(modRecipient)) {
+                autohost.sendMessage(username, "This player is the developer of Autohost, no need to mod them.")
+                return;
+            }
+
             if (modRecipient !== user) {
                 autohost.modPlayer(modRecipient, args[0]);
                 autohost.sendMessage(username, `${args[0].toUpperCase()} is now a moderator.`);
@@ -403,9 +412,11 @@ const commands = {
                 return;
             }
 
-            autohost.unmodPlayer(args[0]);
-
-            autohost.sendMessage(username, `${args[0].toUpperCase()} is no longer a moderator.`);
+            if (autohost.unmodPlayer(args[0])) {
+                autohost.sendMessage(username, `${args[0].toUpperCase()} is no longer a moderator.`);
+            } else {
+                autohost.sendMessage(username, `That player is not a moderator, check the spelling and try again.`);
+            }
 
             autohost.emit("configchange");
         }
@@ -565,7 +576,51 @@ const commands = {
         devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.twoPlayerQueue = [];
-            autohost.sendMessage(username, "Cleared the queue.");
+            if (autohost.twoPlayerOpponent)
+            autohost.sendMessage(username, "Cleared the queue. Type !queue to join.");
+        }
+    },
+    allow: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !allow <username>");
+                return;
+            }
+
+            const allowRecipient = await autohost.getUserID(args[0]);
+
+            if (autohost.ribbon.room.players.indexOf(allowRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(allowRecipient) === -1) {
+                autohost.sendMessage(username, "That player is not in this lobby.");
+                return;
+            }
+
+            autohost.allowPlayer(allowRecipient, args[0]);
+
+            autohost.sendMessage(username, `${args[0].toUpperCase()} can now play in this lobby, regardless of any restrictions.`);
+
+            autohost.emit("configchange");
+        }
+    },
+    unallow: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !unallow <username>");
+                return;
+            }
+
+            if (autohost.unallowPlayer(args[0])) {
+                autohost.sendMessage(username, `${args[0].toUpperCase()} is now subject to the room rules.`);
+            } else {
+                autohost.sendMessage(username, `That player is not on the allowed player list, check the spelling and try again.`);
+            }
+
+            autohost.emit("configchange");
         }
     }
 };

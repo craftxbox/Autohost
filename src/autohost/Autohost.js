@@ -24,6 +24,7 @@ class Autohost extends EventEmitter {
         this.usernamesToIds = new Map();
         this.bannedUsers = new Map();
         this.moderatorUsers = new Map();
+        this.allowedUsers = new Map();
 
         this.twoPlayerOpponent = undefined;
         this.twoPlayerChallenger = undefined;
@@ -79,7 +80,8 @@ class Autohost extends EventEmitter {
             if (!this.ribbon.room.isHost || update.bracket === "spectator") return;
 
             const playerData = await this.getPlayerData(update.uid);
-            const ineligibleMessage = this.twoPlayerOpponent ? this.check2pEligibility(update.uid) : checkAll(this.rules, playerData);
+
+            const ineligibleMessage = await this.checkPlayerEligibility(update.uid);
 
             if (ineligibleMessage) {
                 this.ribbon.room.switchPlayerBracket(update.uid, "spectator");
@@ -194,6 +196,22 @@ When you're ready to start, type !start.`);
         });
     }
 
+    async checkPlayerEligibility(player) {
+        if (this.twoPlayerOpponent) {
+            const elMessage = this.check2pEligibility(player);
+            if (elMessage) return elMessage;
+        }
+
+        const playerData = await this.getPlayerData(player);
+
+        if ([...this.allowedUsers.values()].indexOf(player) !== -1) {
+            // user can play
+            return;
+        }
+
+        return checkAll(this.rules, playerData);
+    }
+
     get roomID() {
         return this.ribbon.room.settings.id;
     }
@@ -212,6 +230,7 @@ When you're ready to start, type !start.`);
     }
 
     async getPlayerData(player) {
+        player = player.toLowerCase();
         if (this.playerData.has(player)) {
             return this.playerData.get(player);
         } else {
@@ -230,7 +249,11 @@ When you're ready to start, type !start.`);
     }
 
     unbanPlayer(username) {
-        this.bannedUsers.delete(username.toLowerCase());
+        if (this.bannedUsers.has(username.toLowerCase())) {
+            this.bannedUsers.delete(username.toLowerCase());
+            return true;
+        }
+        return false;
     }
 
     modPlayer(user, username) {
@@ -238,13 +261,16 @@ When you're ready to start, type !start.`);
     }
 
     unmodPlayer(username) {
-        this.moderatorUsers.delete(username.toLowerCase());
+        if (this.moderatorUsers.has(username.toLowerCase())) {
+            this.moderatorUsers.delete(username.toLowerCase());
+            return true;
+        }
+        return false;
     }
 
     recheckPlayers() {
         return Promise.all(this.ribbon.room.players.map(async player => {
-            const playerData = await this.getPlayerData(player);
-            if (this.twoPlayerOpponent ? this.check2pEligibility(player) : checkAll(this.rules, playerData)) {
+            if (await checkPlayerEligibility(player)) {
                 if (!this.ribbon.room.ingame) {
                     this.ribbon.room.switchPlayerBracket(player, "spectator");
                 }
@@ -328,6 +354,18 @@ When you're ready to start, type !start.`);
             this.autostartTimer = undefined;
         }
         this.emit("configchange");
+    }
+
+    allowPlayer(user, username) {
+        this.allowedUsers.set(username.toLowerCase(), user);
+    }
+
+    unallowPlayer(username) {
+        if (this.allowedUsers.has(username.toLowerCase())) {
+            this.allowedUsers.delete(username.toLowerCase());
+            return true;
+        }
+        return false;
     }
 }
 

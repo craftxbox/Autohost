@@ -270,7 +270,7 @@ When you're ready to start, type !start.`);
 
     recheckPlayers() {
         return Promise.all(this.ribbon.room.players.map(async player => {
-            if (await checkPlayerEligibility(player)) {
+            if (await this.checkPlayerEligibility(player)) {
                 if (!this.ribbon.room.ingame) {
                     this.ribbon.room.switchPlayerBracket(player, "spectator");
                 }

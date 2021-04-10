@@ -109,5 +109,5 @@ I do have a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to help with ho
 
 ## Acknowledgements
 
-Special thanks goes out to Poyo for [documenting the Ribbon](https://github.com/Poyo-SSB/tetrio-bot-docs), craftxbox for
+Special thanks goes out to Poyo for [documenting the Ribbon](https://github.com/Poyo-SSB/tetrio-bot-docs), Zyrixia for the in game avatar, craftxbox for
 the initial idea, and to the many people who have helped test Autohost.

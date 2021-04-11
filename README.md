@@ -1,10 +1,9 @@
 ## ⚠⚠⚠ BIG SCARY DISCLAIMER ⚠⚠⚠
 
 The source code is here to allow you to contribute to development and (perhaps) to learn. It's **NOT** for making
-unauthorised bots. Ask osk for permission before connecting to TETR.IO with anything other than the official client -
-and please don't make a request without properly thinking it through first.
+unauthorised bots. Ask osk for permission before connecting to TETR.IO with anything other than the official client.
 
-99.9% of players **don't** need to try running the code themselves.
+Also, don't make a request for a bot account without properly thinking it through first. Don't waste staff time please!
 
 **You will be banned from the game if you don't follow the rules. It's not my fault if that happens.**
 
@@ -13,11 +12,11 @@ and please don't make a request without properly thinking it through first.
 A bot for osk's TETR.IO that allows for the following additional features in custom games:
 
 * Automatic game starts
-* Participation requirements:
-    * Minimum / maximum rank
-    * Minimum level
-* Room bans
+* 1v1 queues
+* Participation requirements (rank and level)
+* Room moderation (including bans)
 * Custom game presets
+* And more to come!
 
 This is built on a custom Ribbon implementation in Node.js.
 

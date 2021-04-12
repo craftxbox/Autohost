@@ -1,3 +1,5 @@
+// noinspection DuplicatedCode
+
 function serialise(autohost) {
     const data = {};
 
@@ -5,6 +7,7 @@ function serialise(autohost) {
     data.bannedUsers = [...autohost.bannedUsers];
     data.moderatorUsers = [...autohost.moderatorUsers];
     data.allowedUsers = [...autohost.allowedUsers];
+    data.twoPlayerMode = autohost.twoPlayerMode;
     data.twoPlayerChallenger = autohost.twoPlayerChallenger;
     data.twoPlayerOpponent = autohost.twoPlayerOpponent;
     data.twoPlayerQueue = autohost.twoPlayerQueue;
@@ -26,6 +29,7 @@ function deserialise(data, target) {
     target.bannedUsers = new Map(data.bannedUsers);
     target.moderatorUsers = new Map(data.moderatorUsers);
     target.allowedUsers = new Map(data.allowedUsers);
+    target.twoPlayerMode = data.twoPlayerMode;
     target.rules = data.rules;
     target.roomID = data.roomID;
     target.isPrivate = data.isPrivate;

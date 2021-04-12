@@ -1,7 +1,8 @@
 const EventEmitter = require("events");
-const api = require("../gameapi/api");
 
+const api = require("../gameapi/api");
 const commands = require("./commands");
+const {TWO_PLAYER_MODES} = require("../data/enums");
 const {isDeveloper} = require("../data/developers");
 const {checkAll} = require("./rules");
 
@@ -25,6 +26,10 @@ class Autohost extends EventEmitter {
         this.bannedUsers = new Map();
         this.moderatorUsers = new Map();
         this.allowedUsers = new Map();
+
+        this.twoPlayerMode = TWO_PLAYER_MODES.STATIC_HOTSEAT;
+
+        console.log(this.twoPlayerMode);
 
         this.twoPlayerOpponent = undefined;
         this.twoPlayerChallenger = undefined;
@@ -135,8 +140,21 @@ class Autohost extends EventEmitter {
             }
         });
 
-        this.ribbon.on("endmulti", () => {
+        this.ribbon.on("endmulti", endstate => {
             this.gameEndedAt = Date.now();
+
+            const firstPlace = endstate.currentboard.find(player => player.success);
+
+            console.log(firstPlace);
+
+            if (firstPlace && this.twoPlayerMode === TWO_PLAYER_MODES.DYNAMIC_HOTSEAT && firstPlace.user._id !== this.twoPlayerOpponent) {
+                this.ribbon.sendChatMessage(`${firstPlace.user.username.toUpperCase()} has become the champion!`);
+
+                this.twoPlayerOpponent = firstPlace.user._id;
+                this.twoPlayerChallenger = undefined;
+                this.twoPlayerQueue.splice(this.twoPlayerQueue.indexOf(firstPlace.user._id), 1);
+            }
+
             setTimeout(() => {
                 this.nextChallenger();
                 this.checkAutostart();
@@ -303,10 +321,7 @@ When you're ready to start, type !start.`);
                 this.ribbon.sendChatMessage("Game starting in " + this.autostart + " seconds!");
             }
             this.autostartTimer = setTimeout(() => {
-                this.recheckPlayers().then(() => {
-                    this.ribbon.room.start();
-                    this.autostartTimer = undefined;
-                });
+                this.start();
             }, this.autostart * 1000);
         }
     }
@@ -323,7 +338,7 @@ When you're ready to start, type !start.`);
 
     nextChallenger() {
         if (!this.twoPlayerOpponent || this.ingame) {
-            return;
+            return false;
         }
 
         this.twoPlayerChallenger = this.twoPlayerQueue.shift();
@@ -334,7 +349,7 @@ When you're ready to start, type !start.`);
 
         if (!this.twoPlayerChallenger) {
             this.ribbon.sendChatMessage("The 1v1 queue is empty! Type !queue to join.");
-            return;
+            return false;
         }
 
         this.ribbon.room.switchPlayerBracket(this.twoPlayerOpponent, "player");
@@ -343,6 +358,8 @@ When you're ready to start, type !start.`);
         this.getPlayerData(this.twoPlayerChallenger).then(playerData => {
             this.ribbon.sendChatMessage(`${playerData.username.toUpperCase()} is up next!`);
         });
+
+        return true;
     }
 
     disableQueue() {
@@ -366,6 +383,25 @@ When you're ready to start, type !start.`);
             return true;
         }
         return false;
+    }
+
+    async start() {
+        if (this.twoPlayerOpponent) {
+            if (!this.twoPlayerChallenger) {
+                this.nextChallenger();
+            }
+        } else {
+            await this.recheckPlayers();
+        }
+
+        if (this.ribbon.room.players.length < 2) {
+            this.ribbon.sendChatMessage("Not enough players to start.");
+            return;
+        }
+        
+        clearTimeout(this.autostartTimer);
+
+        this.ribbon.room.start();
     }
 }
 

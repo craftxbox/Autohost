@@ -215,6 +215,11 @@ api.getMe().then(user => {
         const lobby = getHostLobby(user);
 
         if (msg === "!private" || msg === "!public") {
+            if (process.env.DEV_ONLY && !isDeveloper(user)) {
+                botMain.sendDM(user, "Room creation is restricted.");
+                return;
+            }
+
             if (lobby) {
                 botMain.sendDM(user, "You already have a lobby open. Join #" + lobby.ribbon.room.id);
             } else {

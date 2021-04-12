@@ -150,13 +150,7 @@ const commands = {
         modonly: true,
         devonly: false,
         handler: function (user, username, args, autohost) {
-            if (autohost.ribbon.room.players.length < 2) {
-                autohost.sendMessage(username, "Not enough players to start.");
-                return;
-            }
-            autohost.recheckPlayers().then(() => {
-                autohost.ribbon.room.start();
-            });
+            autohost.start();
         }
     },
     preset: {
@@ -490,6 +484,10 @@ const commands = {
                 return;
             }
 
+            if (autohost.twoPlayerChallenger === user) {
+                autohost.sendMessage(username, "You're up next!");
+                return;
+            }
 
             const queuePos = autohost.twoPlayerQueue.indexOf(user);
 
@@ -525,20 +523,7 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: function (user, username, args, autohost) {
-            const commandList = Object.keys(commands).filter(cmd => {
-                if (commands[cmd].devonly) {
-                    return isDeveloper(user);
-                } else if (commands[cmd].hostonly) {
-                    return isDeveloper(user) || (autohost.host === user);
-                } else if (commands[cmd].modonly) {
-                    return isDeveloper(user) || (autohost.host === user) || [...autohost.moderatorUsers.values()].indexOf(user) !== -1;
-                }
-
-                return true;
-            });
-            commandList.sort();
-            autohost.sendMessage(username, commandList.map(cmd => "!" + cmd).join(", "));
-            autohost.sendMessage(username, "Overwhelmed? Visit https://kagar.in/autohost for the full documentation.")
+            autohost.sendMessage(username, "Go to https://kagar.in/autohost/commands for a list of commands.");
         }
     },
     set: {
@@ -576,7 +561,7 @@ const commands = {
         devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.twoPlayerQueue = [];
-            if (autohost.twoPlayerOpponent)
+            autohost.twoPlayerChallenger = undefined;
             autohost.sendMessage(username, "Cleared the queue. Type !queue to join.");
         }
     },
@@ -621,6 +606,41 @@ const commands = {
             }
 
             autohost.emit("configchange");
+        }
+    },
+    queuelist: {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (autohost.twoPlayerOpponent) {
+                const usernames = [];
+
+                for (const i in autohost.twoPlayerQueue) {
+                    if (autohost.twoPlayerQueue.hasOwnProperty(i)) {
+                        usernames.push("#" + (i+1) + ": " + (await autohost.getPlayerData(autohost.twoPlayerQueue[i])).username.toUpperCase());
+                    }
+                }
+
+                const challenger = autohost.twoPlayerChallenger ? (await autohost.getPlayerData(autohost.twoPlayerChallenger)).username.toUpperCase() : "(challenger)";
+                const opponent = (await autohost.getPlayerData(autohost.twoPlayerOpponent)).username.toUpperCase();
+
+                autohost.sendMessage(username, `${opponent} vs ${challenger}\n\n${usernames.length > 0 ? usernames.join("\n"): "Queue is empty."}`);
+            } else {
+                autohost.sendMessage(username, "The queue is off.");
+            }
+        }
+    },
+    eval: {
+        hostonly: false,
+        modonly: false,
+        devonly: true,
+        handler: function (user, username, args, autohost) {
+            try {
+                autohost.sendMessage(username, "Eval done: " + JSON.stringify(eval(args.join(" "))));
+            } catch (e) {
+                autohost.sendMessage(username, "Eval failed: " + e.toString());
+            }
         }
     }
 };

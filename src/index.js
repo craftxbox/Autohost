@@ -264,11 +264,12 @@ api.getMe().then(user => {
             ah.ribbon.room.setRoomID("NOOBROOM");
 
             ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-            ah.motd_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
+            ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
             ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-            ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for players with rank :rankS: or below to play against others of similar skill.";
+            ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill.";
 
-            ah.rules.unrated_allowed = false;
+            ah.rules.unrated_allowed = true;
+            ah.rules.rankless_allowed = false;
             ah.rules.anons_allowed = false;
             ah.rules.max_rank = "s";
 

@@ -386,6 +386,9 @@ When you're ready to start, type !start.`);
     }
 
     async start() {
+        clearTimeout(this.autostartTimer);
+        this.autostartTimer = undefined;
+
         if (this.twoPlayerOpponent) {
             if (!this.twoPlayerChallenger) {
                 this.nextChallenger();
@@ -398,8 +401,6 @@ When you're ready to start, type !start.`);
             this.ribbon.sendChatMessage("Not enough players to start.");
             return;
         }
-        
-        clearTimeout(this.autostartTimer);
 
         this.ribbon.room.start();
     }

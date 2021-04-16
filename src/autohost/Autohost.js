@@ -2,6 +2,7 @@ const EventEmitter = require("events");
 
 const api = require("../gameapi/api");
 const commands = require("./commands");
+const APMCalculator = require("./APMCalculator");
 const {TWO_PLAYER_MODES} = require("../data/enums");
 const {isDeveloper} = require("../data/developers");
 const {checkAll} = require("./rules");
@@ -21,6 +22,8 @@ class Autohost extends EventEmitter {
 
         this.motd = undefined;
 
+        this.apmCalculator = new APMCalculator(this);
+
         this.playerData = new Map();
         this.usernamesToIds = new Map();
         this.bannedUsers = new Map();
@@ -28,8 +31,6 @@ class Autohost extends EventEmitter {
         this.allowedUsers = new Map();
 
         this.twoPlayerMode = TWO_PLAYER_MODES.STATIC_HOTSEAT;
-
-        console.log(this.twoPlayerMode);
 
         this.twoPlayerOpponent = undefined;
         this.twoPlayerChallenger = undefined;
@@ -79,6 +80,15 @@ class Autohost extends EventEmitter {
             if (queueIndex !== -1) {
                 this.twoPlayerQueue.splice(queueIndex, 1);
             }
+        });
+
+
+        this.ribbon.on("replay", replay => {
+            replay.frames.forEach(frame => {
+                if (frame.type === "ige" && frame.data.data.type === "attack") {
+                    this.apmCalculator.addGarbageIGE(frame.data.data.sender, frame.data.data.lines);
+                }
+            });
         });
 
         this.ribbon.on("gmupdate.bracket", async update => {
@@ -140,12 +150,27 @@ class Autohost extends EventEmitter {
             }
         });
 
+        this.ribbon.on("startmulti", () => {
+            setTimeout(() => {
+                this.apmCalculator.start();
+            },  8000); // roughly account for the cutin/countdown
+
+            // ok this seems to work, but i'm not sure
+            // `startscope` seems to prompt the server to send replay data, which we Really Want™
+            this.ribbon.room.players.forEach(playerID => {
+                this.ribbon.sendMessage({
+                    command: "startscope",
+                    data: playerID
+                });
+            });
+        });
+
         this.ribbon.on("endmulti", endstate => {
             this.gameEndedAt = Date.now();
 
-            const firstPlace = endstate.currentboard.find(player => player.success);
+            this.apmCalculator.stop();
 
-            console.log(firstPlace);
+            const firstPlace = endstate.currentboard.find(player => player.success);
 
             if (firstPlace && this.twoPlayerMode === TWO_PLAYER_MODES.DYNAMIC_HOTSEAT && firstPlace.user._id !== this.twoPlayerOpponent) {
                 this.ribbon.sendChatMessage(`${firstPlace.user.username.toUpperCase()} has become the champion!`);
@@ -191,7 +216,7 @@ class Autohost extends EventEmitter {
 
 When you're ready to start, type !start.`);
                 } else {
-                    const ineligibleMessage = checkAll(this.rules, user);
+                    const ineligibleMessage = checkAll(this.rules, user, this);
 
                     if (ineligibleMessage) {
                         this.ribbon.sendChatMessage(this.motd_ineligible ? this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
@@ -227,7 +252,7 @@ When you're ready to start, type !start.`);
             return;
         }
 
-        return checkAll(this.rules, playerData);
+        return checkAll(this.rules, playerData, this);
     }
 
     get roomID() {

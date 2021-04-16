@@ -618,7 +618,7 @@ const commands = {
 
                 for (const i in autohost.twoPlayerQueue) {
                     if (autohost.twoPlayerQueue.hasOwnProperty(i)) {
-                        usernames.push("#" + (i+1) + ": " + (await autohost.getPlayerData(autohost.twoPlayerQueue[i])).username.toUpperCase());
+                        usernames.push("#" + (parseInt(i)+1) + ": " + (await autohost.getPlayerData(autohost.twoPlayerQueue[i])).username.toUpperCase());
                     }
                 }
 

@@ -96,10 +96,23 @@ const RULES = {
         description(value) {
             return `Minimum level: ${value}`;
         }
+    },
+    max_apm: {
+        type: Number,
+        default: 0,
+        check(value, user, autohost) {
+            return autohost.apmCalculator.banned.has(user._id);
+        },
+        message() {
+            return `You cannot play as you have been consistently exceeding the room's APM limit`;
+        },
+        description(value) {
+            return `Maximum APM: ${value}`;
+        }
     }
 };
 
-function checkAll(ruleset, user) {
+function checkAll(ruleset, user, autohost) {
     for (const rule in RULES) {
         if (RULES.hasOwnProperty(rule)) {
             // default is a reserved keyword lol
@@ -113,7 +126,7 @@ function checkAll(ruleset, user) {
                 value = defaultValue;
             }
 
-            if (check(value, user)) {
+            if (check(value, user, autohost)) {
                 return message(value, user);
             }
         }

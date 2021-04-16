@@ -285,7 +285,7 @@ api.getMe().then(user => {
                 ah.persist = true;
 
                 ah.ribbon.room.setName("SS AND BELOW ONLY");
-                ah.ribbon.room.setRoomID("NOOKCUTE");
+                ah.ribbon.room.setRoomID("WOOMY");
 
                 ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
                 ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below. Feel free to spectate.";

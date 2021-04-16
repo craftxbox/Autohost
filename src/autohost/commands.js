@@ -476,8 +476,8 @@ const commands = {
                 autohost.sendMessage(username, "You can't queue against yourself in a 1v1.");
                 return;
             }
-
-            const rulesMessage = checkAll(autohost.rules, await getUser(user), this);
+          
+            const rulesMessage = checkAll(autohost.rules, await getUser(user), autohost);
 
             if (rulesMessage) {
                 autohost.sendMessage(username, rulesMessage + ".");

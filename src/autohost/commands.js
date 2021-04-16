@@ -477,7 +477,7 @@ const commands = {
                 return;
             }
 
-            const rulesMessage = checkAll(autohost.rules, await getUser(user))
+            const rulesMessage = checkAll(autohost.rules, await getUser(user), this);
 
             if (rulesMessage) {
                 autohost.sendMessage(username, rulesMessage + ".");

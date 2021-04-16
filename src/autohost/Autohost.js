@@ -177,7 +177,9 @@ class Autohost extends EventEmitter {
 
                 this.twoPlayerOpponent = firstPlace.user._id;
                 this.twoPlayerChallenger = undefined;
-                this.twoPlayerQueue.splice(this.twoPlayerQueue.indexOf(firstPlace.user._id), 1);
+                if (this.twoPlayerQueue.indexOf(firstPlace.user._id) !== -1) {
+                    this.twoPlayerQueue.splice(this.twoPlayerQueue.indexOf(firstPlace.user._id), 1);
+                }
             }
 
             setTimeout(() => {

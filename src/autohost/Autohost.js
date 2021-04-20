@@ -150,6 +150,19 @@ class Autohost extends EventEmitter {
             }
         });
 
+        this.ribbon.on("readymulti", data => {
+            data.contexts.forEach(player => {
+                this.checkPlayerEligibility(player.user._id).then(ineligible => {
+                    if (ineligible) {
+                        this.ribbon.room.kickPlayer(id);
+                        console.log(player.user._id + " failed final check.");
+                    } else {
+                        console.log(player.user._id + " verified for play.");
+                    }
+                });
+            });
+        });
+
         this.ribbon.on("startmulti", () => {
             setTimeout(() => {
                 this.apmCalculator.start();

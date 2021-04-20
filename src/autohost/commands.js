@@ -40,11 +40,6 @@ const commands = {
             const playerData = await autohost.getPlayerData(args[0]);
             const kickRecipient = playerData && playerData._id;
 
-            if (!kickRecipient || autohost.ribbon.room.players.indexOf(kickRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(kickRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
-                return;
-            }
-
             const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
 
             if (staff) {
@@ -97,11 +92,6 @@ const commands = {
 
             const playerData = await autohost.getPlayerData(args[0]);
             const banRecipient = playerData && playerData._id;
-
-            if (!banRecipient || autohost.ribbon.room.players.indexOf(banRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(banRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
-                return;
-            }
 
             const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
 

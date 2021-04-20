@@ -154,7 +154,7 @@ class Autohost extends EventEmitter {
             data.contexts.forEach(player => {
                 this.checkPlayerEligibility(player.user._id).then(ineligible => {
                     if (ineligible) {
-                        this.ribbon.room.kickPlayer(id);
+                        this.ribbon.room.kickPlayer(player.user._id);
                         console.log(player.user._id + " failed final check.");
                     } else {
                         console.log(player.user._id + " verified for play.");

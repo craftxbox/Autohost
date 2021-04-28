@@ -1,4 +1,4 @@
-function persistLobby_S() {
+function persistLobby_S(ah) {
     ah.persist = true;
 
     ah.ribbon.room.setName("S AND BELOW ONLY");
@@ -19,7 +19,7 @@ function persistLobby_S() {
     ah.emit("configchange");
 }
 
-function persistLobby_SS() {
+function persistLobby_SS(ah) {
     ah.persist = true;
 
     ah.ribbon.room.setName("SS AND BELOW ONLY");

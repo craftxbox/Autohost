@@ -183,7 +183,7 @@ function createPersistLobby(name) {
     if (!persistLobbies.hasOwnProperty(name)) return;
 
     createLobby(botUserID, false, name).then(ah => {
-        persistLobbies[name]();
+        persistLobbies[name](ah);
     });
 }
 

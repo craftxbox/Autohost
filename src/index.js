@@ -36,6 +36,18 @@ function getHostLobby(host) {
     });
 }
 
+function createPersistLobbies() {
+    if (process.env.PERSIST_ROOMS_DISABLED) return;
+    console.log("Creating persist lobbies...");
+
+    Object.keys(persistLobbies).forEach(lobby => {
+        if (sessions.has(lobby)) return;
+
+        console.log("Creating lobby " + lobby);
+        createPersistLobby(lobby);
+    });
+}
+
 function restoreLobbies() {
     return redis.getAllLobbies().then(lobbies => {
         console.log("Restoring " + lobbies.size + " lobbies.");
@@ -63,6 +75,7 @@ function restoreLobbies() {
                     });
                     ribbon.disconnectGracefully();
                     sessions.delete(key);
+                    createPersistLobbies();
                 } else if (error === "you are already in this room") {
                     console.log("Server thinks we're still in the lobby, trying again in 5...");
                     setTimeout(() => {
@@ -87,14 +100,6 @@ function restoreLobbies() {
             ribbon.once("ready", () => {
                 ribbon.joinRoom(lobby.roomID);
             });
-        });
-    }).then(() => {
-        if (process.env.PERSIST_ROOMS_DISABLED) return;
-
-        Object.keys(persistLobbies).forEach(lobby => {
-            if (sessions.has(lobby)) return;
-
-            createPersistLobby(lobby);
         });
     });
 }

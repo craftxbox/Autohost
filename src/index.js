@@ -62,6 +62,7 @@ function restoreLobbies() {
                         console.log(`Room ${key} no longer exists, deleting.`);
                     });
                     ribbon.disconnectGracefully();
+                    sessions.delete(key);
                 } else if (error === "you are already in this room") {
                     console.log("Server thinks we're still in the lobby, trying again in 5...");
                     setTimeout(() => {

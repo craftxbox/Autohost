@@ -8,6 +8,8 @@ const {isDeveloper} = require("./data/developers");
 const {serialise, deserialise} = require("./redis/serialiser");
 const {randomBytes} = require("crypto");
 
+const persistLobbies = require("./autohost/persistlobbies");
+
 require("dotenv").config({path: path.join(__dirname, "../.env")});
 
 if (!process.env.TOKEN) {
@@ -84,6 +86,14 @@ function restoreLobbies() {
             ribbon.once("ready", () => {
                 ribbon.joinRoom(lobby.roomID);
             });
+        });
+    }).then(() => {
+        if (process.env.PERSIST_ROOMS_DISABLED) return;
+
+        Object.keys(persistLobbies).forEach(lobby => {
+            if (sessions.has(lobby)) return;
+
+            createPersistLobby(lobby);
         });
     });
 }
@@ -166,6 +176,14 @@ function createLobby(host, isPrivate, fixedID) {
         ribbon.once("ready", () => {
             ribbon.createRoom(isPrivate);
         });
+    });
+}
+
+function createPersistLobby(name) {
+    if (!persistLobbies.hasOwnProperty(name)) return;
+
+    createLobby(botUserID, false, name).then(ah => {
+        persistLobbies[name]();
     });
 }
 
@@ -254,53 +272,5 @@ api.getMe().then(user => {
         process.exit(0);
     });
 
-    restoreLobbies().then(() => {
-        if (process.env.PERSIST_ROOMS_DISABLED) return;
-
-        if (!sessions.has("persistLobby_S")) {
-            createLobby(botUserID, false, "persistLobby_S").then(ah => {
-                ah.persist = true;
-
-                ah.ribbon.room.setName("S AND BELOW ONLY");
-                ah.ribbon.room.setRoomID("NOOBROOM");
-
-                ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-                ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
-                ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-                ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill.";
-
-                ah.rules.unrated_allowed = false;
-                ah.rules.rankless_allowed = true;
-                ah.rules.anons_allowed = false;
-                ah.rules.max_rank = "s";
-
-                ah.autostart = 10;
-
-                ah.emit("configchange");
-            });
-        }
-
-        if (!sessions.has("persistLobby_SS")) {
-            createLobby(botUserID, false, "persistLobby_SS").then(ah => {
-                ah.persist = true;
-
-                ah.ribbon.room.setName("SS AND BELOW ONLY");
-                ah.ribbon.room.setRoomID("WOOMY");
-
-                ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-                ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below. Feel free to spectate.";
-                ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-                ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below.";
-
-                ah.rules.unrated_allowed = false;
-                ah.rules.rankless_allowed = true;
-                ah.rules.anons_allowed = false;
-                ah.rules.max_rank = "ss";
-
-                ah.autostart = 10;
-
-                ah.emit("configchange");
-            });
-        }
-    });
+    restoreLobbies();
 });

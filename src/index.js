@@ -279,4 +279,5 @@ api.getMe().then(user => {
     });
 
     restoreLobbies();
+    createPersistLobbies();
 });

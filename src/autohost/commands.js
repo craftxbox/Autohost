@@ -124,7 +124,7 @@ const commands = {
                 autohost.banPlayer(banRecipient, args[0]);
                 autohost.ribbon.room.kickPlayer(banRecipient);
                 if (autohost.ribbon.room.settings.meta.allowAnonymous) {
-                    autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}. Note that banned players can rejoin with anonymous accounts. I'll figure this out one day.`);
+                    autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}. Note that banned players can rejoin with anonymous accounts.`);
                 } else {
                     autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}.`);
                 }

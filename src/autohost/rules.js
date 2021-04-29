@@ -13,7 +13,7 @@ const RULES = {
             return !value && user.role === "anon";
         },
         message() {
-            return "Anonymous players cannot play in this room";
+            return "Unregistered (anonymous / guest) players cannot play in this room";
         },
         description(value) {
             return `Anonymous players allowed: ${value ? ":checked:" : ":crossed:"}`;

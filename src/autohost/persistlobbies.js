@@ -9,7 +9,7 @@ function persistLobby_S(ah) {
     ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
     ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill.";
 
-    ah.rules.unrated_allowed = false;
+    ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
     ah.rules.anons_allowed = false;
     ah.rules.max_rank = "s";
@@ -30,7 +30,7 @@ function persistLobby_SS(ah) {
     ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
     ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below.";
 
-    ah.rules.unrated_allowed = false;
+    ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
     ah.rules.anons_allowed = false;
     ah.rules.max_rank = "ss";

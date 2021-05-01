@@ -285,6 +285,7 @@ api.getMe().then(user => {
         process.exit(0);
     });
 
-    restoreLobbies();
-    createPersistLobbies();
+    restoreLobbies().then(() => {
+        createPersistLobbies();
+    });
 });

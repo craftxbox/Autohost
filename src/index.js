@@ -81,7 +81,7 @@ function restoreLobbies() {
                 } else if (error === "you are already in this room") {
                     joinAttempts++;
                     console.log("Server thinks we're still in the lobby, trying again in 5...");
-                    if (joinAttempts > 5) {
+                    if (joinAttempts < 5) {
                         setTimeout(() => {
                             ribbon.joinRoom(lobby.roomID);
                         }, 5000);

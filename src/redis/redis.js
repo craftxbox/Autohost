@@ -2,9 +2,9 @@ const redis = require("redis");
 
 const client = redis.createClient();
 
-function getLobby(user) {
+function getLobby(id) {
     return new Promise((resolve, reject) => {
-        client.hget("lobbysettings", user, (err, res) => {
+        client.hget("lobbysettings", id, (err, res) => {
             if (err) return reject(err);
 
             if (res) {
@@ -16,18 +16,18 @@ function getLobby(user) {
     });
 }
 
-function setLobby(user, settings) {
+function setLobby(id, settings) {
     return new Promise((resolve, reject) => {
-        client.hset("lobbysettings", user, JSON.stringify(settings), err => {
+        client.hset("lobbysettings", id, JSON.stringify(settings), err => {
             if (err) return reject(err);
             resolve();
         });
     });
 }
 
-function deleteLobby(user) {
+function deleteLobby(id) {
     return new Promise((resolve, reject) => {
-        client.hdel("lobbysettings", user, err => {
+        client.hdel("lobbysettings", id, err => {
             if (err) return reject(err);
             resolve();
         });

@@ -68,19 +68,26 @@ function restoreLobbies() {
 
             const ribbon = new Ribbon(process.env.TOKEN);
 
+            let joinAttempts = 0;
+
             ribbon.on("err", error => {
                 if (error === "no such room") {
                     redis.deleteLobby(key).finally(() => {
                         console.log(`Room ${key} no longer exists, deleting.`);
+                        ribbon.disconnectGracefully();
+                        sessions.delete(key);
+                        createPersistLobbies();
                     });
-                    ribbon.disconnectGracefully();
-                    sessions.delete(key);
-                    createPersistLobbies();
                 } else if (error === "you are already in this room") {
+                    joinAttempts++;
                     console.log("Server thinks we're still in the lobby, trying again in 5...");
-                    setTimeout(() => {
-                        ribbon.joinRoom(lobby.roomID);
-                    }, 5000);
+                    if (joinAttempts > 5) {
+                        setTimeout(() => {
+                            ribbon.joinRoom(lobby.roomID);
+                        }, 5000);
+                    } else {
+                        console.log("Something's gone horribly wrong!");
+                    }
                 }
             })
 

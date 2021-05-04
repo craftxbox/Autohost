@@ -122,6 +122,9 @@ class Autohost extends EventEmitter {
 
             const username = chat.user.username;
             const user = chat.user._id;
+
+            if (!user) return; // ignore osk trying to bully us
+
             let host = user === this.host;
             const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
             const dev = isDeveloper(user);

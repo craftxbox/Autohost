@@ -242,14 +242,30 @@ When you're ready to start, type !start.`);
                     const ineligibleMessage = checkAll(this.rules, user, this);
 
                     if (ineligibleMessage) {
-                        this.ribbon.sendChatMessage(this.motd_ineligible ? this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        if (this.ribbon.room.memberCount > 1) {
+                            this.ribbon.sendChatMessage(this.motd_ineligible ?
+                                this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()).replace(/\$REASON/g, ineligibleMessage) :
+                                `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        } else {
+                            this.ribbon.sendChatMessage(this.motd_empty_ineligible ?
+                                this.motd_empty_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()).replace(/\$REASON/g, ineligibleMessage) :
+                                `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        }
                     } else {
                         if (this.twoPlayerOpponent) {
                             this.getPlayerData(this.twoPlayerOpponent).then(opponent => {
                                 this.ribbon.sendChatMessage(`Welcome, ${user.username.toUpperCase()}. Type !queue to join the 1v1 queue against ${opponent.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
                             });
                         } else {
-                            this.ribbon.sendChatMessage(this.motd ? this.motd.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            if (this.ribbon.room.memberCount > 1) {
+                                this.ribbon.sendChatMessage(this.motd ?
+                                    this.motd.replace(/\$PLAYER/g, user.username.toUpperCase()) :
+                                    `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            } else {
+                                this.ribbon.sendChatMessage(this.motd_empty ?
+                                    this.motd_empty.replace(/\$PLAYER/g, user.username.toUpperCase()) :
+                                    `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            }
                         }
                         return;
                     }

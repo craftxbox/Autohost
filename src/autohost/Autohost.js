@@ -116,9 +116,12 @@ class Autohost extends EventEmitter {
         this.ribbon.on("chat", async chat => {
             if (chat.user.role === "bot") return; // ignore other bots
 
+            const message = chat.content.trim();
+
+            if (!message.startsWith("!")) return; // ignore not commands
+
             const username = chat.user.username;
             const user = chat.user._id;
-            const message = chat.content.trim();
             let host = user === this.host;
             const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
             const dev = isDeveloper(user);
@@ -126,8 +129,6 @@ class Autohost extends EventEmitter {
             if (!host && !dev) {
                 host = ["admin", "mod"].indexOf((await this.getPlayerData(user)).role) !== -1;
             }
-
-            if (!message.startsWith("!")) return; // ignore not commands
 
             const args = message.substring(1).split(" ");
             const command = args.shift().toLowerCase();

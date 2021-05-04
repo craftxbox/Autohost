@@ -4,6 +4,13 @@ function persistLobby_S(ah) {
     ah.ribbon.room.setName("S AND BELOW ONLY");
     ah.ribbon.room.setRoomID("NOOBROOM");
 
+    ah.ribbon.room.setRoomConfig([
+        {
+            index: "meta.bgm",
+            value: "RANDOMbattle"
+        }
+    ]);
+
     ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
     ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
     ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
@@ -24,6 +31,13 @@ function persistLobby_SS(ah) {
 
     ah.ribbon.room.setName("SS AND BELOW ONLY");
     ah.ribbon.room.setRoomID("WOOMY");
+
+    ah.ribbon.room.setRoomConfig([
+        {
+            index: "meta.bgm",
+            value: "RANDOMbattle"
+        }
+    ]);
 
     ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
     ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below. Feel free to spectate.";

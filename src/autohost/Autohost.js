@@ -124,7 +124,7 @@ class Autohost extends EventEmitter {
             const dev = isDeveloper(user);
 
             if (!host && !dev) {
-                host = ["admin", "mod"].indexOf((await this.getPlayerData()).role) !== -1;
+                host = ["admin", "mod"].indexOf((await this.getPlayerData(user)).role) !== -1;
             }
 
             if (!message.startsWith("!")) return; // ignore not commands

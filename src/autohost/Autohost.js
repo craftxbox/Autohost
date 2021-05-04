@@ -116,9 +116,15 @@ class Autohost extends EventEmitter {
         this.ribbon.on("chat", async chat => {
             if (chat.user.role === "bot") return; // ignore other bots
 
+            const message = chat.content.trim();
+
+            if (!message.startsWith("!")) return; // ignore not commands
+
             const username = chat.user.username;
             const user = chat.user._id;
-            const message = chat.content.trim();
+
+            if (!user) return; // ignore osk trying to bully us
+
             let host = user === this.host;
             const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
             const dev = isDeveloper(user);
@@ -126,8 +132,6 @@ class Autohost extends EventEmitter {
             if (!host && !dev) {
                 host = ["admin", "mod"].indexOf((await this.getPlayerData(user)).role) !== -1;
             }
-
-            if (!message.startsWith("!")) return; // ignore not commands
 
             const args = message.substring(1).split(" ");
             const command = args.shift().toLowerCase();
@@ -238,14 +242,30 @@ When you're ready to start, type !start.`);
                     const ineligibleMessage = checkAll(this.rules, user, this);
 
                     if (ineligibleMessage) {
-                        this.ribbon.sendChatMessage(this.motd_ineligible ? this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        if (this.ribbon.room.memberCount > 1) {
+                            this.ribbon.sendChatMessage(this.motd_ineligible ?
+                                this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()).replace(/\$REASON/g, ineligibleMessage) :
+                                `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        } else {
+                            this.ribbon.sendChatMessage(this.motd_empty_ineligible ?
+                                this.motd_empty_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()).replace(/\$REASON/g, ineligibleMessage) :
+                                `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                        }
                     } else {
                         if (this.twoPlayerOpponent) {
                             this.getPlayerData(this.twoPlayerOpponent).then(opponent => {
                                 this.ribbon.sendChatMessage(`Welcome, ${user.username.toUpperCase()}. Type !queue to join the 1v1 queue against ${opponent.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
                             });
                         } else {
-                            this.ribbon.sendChatMessage(this.motd ? this.motd.replace(/\$PLAYER/g, user.username.toUpperCase()) : `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            if (this.ribbon.room.memberCount > 1) {
+                                this.ribbon.sendChatMessage(this.motd ?
+                                    this.motd.replace(/\$PLAYER/g, user.username.toUpperCase()) :
+                                    `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            } else {
+                                this.ribbon.sendChatMessage(this.motd_empty ?
+                                    this.motd_empty.replace(/\$PLAYER/g, user.username.toUpperCase()) :
+                                    `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
+                            }
                         }
                         return;
                     }

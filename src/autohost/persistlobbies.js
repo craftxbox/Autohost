@@ -12,9 +12,9 @@ function persistLobby_S(ah) {
     ]);
 
     ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-    ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill. Feel free to spectate, however please be respectful while doing so.";
+    ah.motd_ineligible = "Welcome, $PLAYER. $REASON. Feel free to spectate, however please be respectful while doing so.";
     ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-    ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankS: or below to play against others of similar skill.";
+    ah.motd_empty_ineligible = "Welcome, $PLAYER. $REASON.";
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
@@ -40,9 +40,9 @@ function persistLobby_SS(ah) {
     ]);
 
     ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-    ah.motd_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below. Feel free to spectate.";
+    ah.motd_ineligible = "Welcome, $PLAYER. $REASON. Feel free to spectate, however please be respectful while doing so.";
     ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-    ah.motd_empty_ineligible = "Welcome, $PLAYER. This is a room for registered players with rank :rankSS: and below.";
+    ah.motd_empty_ineligible = "Welcome, $PLAYER. $REASON.";
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;

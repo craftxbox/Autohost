@@ -113,15 +113,19 @@ class Autohost extends EventEmitter {
             }
         });
 
-        this.ribbon.on("chat", chat => {
+        this.ribbon.on("chat", async chat => {
             if (chat.user.role === "bot") return; // ignore other bots
 
             const username = chat.user.username;
             const user = chat.user._id;
             const message = chat.content.trim();
-            const host = user === this.host;
+            let host = user === this.host;
             const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
-            const dev = isDeveloper(user)
+            const dev = isDeveloper(user);
+
+            if (!host && !dev) {
+                host = ["admin", "mod"].indexOf((await this.getPlayerData()).role) !== -1;
+            }
 
             if (!message.startsWith("!")) return; // ignore not commands
 

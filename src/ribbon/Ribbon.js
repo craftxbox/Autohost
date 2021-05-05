@@ -152,7 +152,7 @@ class Ribbon extends EventEmitter {
             if (!this.dead) {
                 setTimeout(() => {
                     this.connect(this.lastEndpoint);
-                }, 5000);
+                }, 1000);
             }
         });
 
@@ -165,7 +165,7 @@ class Ribbon extends EventEmitter {
             if (!this.dead) {
                 setTimeout(() => {
                     this.connect(this.lastEndpoint);
-                }, 5000);
+                }, 1000);
             }
         });
     }

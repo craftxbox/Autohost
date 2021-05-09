@@ -4,7 +4,7 @@ const EventEmitter = require("events");
 const Room = require("./Room");
 const api = require("../gameapi/api");
 
-const CLIENT_VERSION = {"id":"21fb73c","time":1620132186000};
+const CLIENT_VERSION = {"id":"54b1724","time":1620590896000};
 
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 

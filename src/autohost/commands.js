@@ -67,6 +67,11 @@ const commands = {
                 return;
             }
 
+            if (!autohost.ribbon.room.settings.players.find(player => player._id === kickRecipient)) {
+                autohost.sendMessage(username, "That player is not in the lobby.");
+                return;
+            }
+
             if (kickRecipient !== user) {
                 autohost.ribbon.room.kickPlayer(kickRecipient);
                 autohost.sendMessage(username, `Kicked ${args[0].toUpperCase()}.`);

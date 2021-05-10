@@ -415,6 +415,11 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: async function (user, username, args, autohost) {
+            if (autohost.host === botUserID) {
+                autohost.sendMessage(username, "This room is persistent and doesn't have a human host. If you have an issue, contact Zudo#0800 on Discord.");
+                return;
+            }
+
             const host = await getUser(autohost.host);
 
             if (host) {

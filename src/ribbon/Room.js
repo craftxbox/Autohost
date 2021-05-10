@@ -8,8 +8,6 @@ class Room extends EventEmitter {
         this.ribbon = ribbon;
         this.settings = settings;
 
-        this.ingame = false;
-
         this.ribbon.on("gmupdate", settings => {
             this.settings = settings;
         });
@@ -36,18 +34,14 @@ class Room extends EventEmitter {
             this.settings.players.splice(idx, 1);
             this.emit("playersupdate");
         });
-
-        this.ribbon.on("startmulti", () => {
-            this.ingame = true;
-        });
-
-        this.ribbon.on("endmulti", () => {
-            this.ingame = false;
-        });
     }
 
     get isHost() {
         return this.settings.owner === botUserID;
+    }
+
+    get ingame() {
+        return this.settings.game.state === "ingame";
     }
 
     get id() {

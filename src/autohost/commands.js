@@ -440,7 +440,7 @@ const commands = {
             }
 
             if (autohost.ribbon.room.ingame) {
-                autohost.sendMessage(username, "Please wait for the current game to end.");
+                autohost.sendMessage(username, "Please wait for the current game to end before changing queue settings.");
                 return;
             }
 
@@ -515,6 +515,11 @@ const commands = {
         modonly: true,
         devonly: false,
         handler: async function (user, username, args, autohost) {
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end before changing queue settings.");
+                return;
+            }
+
             if (autohost.twoPlayerOpponent) {
                 autohost.disableQueue();
                 autohost.sendMessage(username, "The 1v1 queue was disabled.");
@@ -565,6 +570,11 @@ const commands = {
         modonly: true,
         devonly: false,
         handler: function (user, username, args, autohost) {
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end before changing queue settings.");
+                return;
+            }
+
             autohost.twoPlayerQueue = [];
             autohost.twoPlayerChallenger = undefined;
             autohost.sendMessage(username, "Cleared the queue. Type !queue to join.");

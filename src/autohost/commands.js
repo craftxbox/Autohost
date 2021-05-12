@@ -439,6 +439,11 @@ const commands = {
                 return;
             }
 
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end.");
+                return;
+            }
+
             const oldOpponent = autohost.twoPlayerOpponent;
 
             const opponent = await autohost.getUserID(args[0]);

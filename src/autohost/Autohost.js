@@ -372,7 +372,7 @@ When you're ready to start, type !start.`);
             return;
         }
 
-        if (this.ingame) return;
+        if (this.ribbon.room.ingame) return;
 
         if (this.ribbon.room.players.length < 2 && this.autostartTimer) {
             if (!this.twoPlayerOpponent) {
@@ -401,7 +401,7 @@ When you're ready to start, type !start.`);
     }
 
     nextChallenger() {
-        if (!this.twoPlayerOpponent || this.ingame) {
+        if (!this.twoPlayerOpponent || this.ribbon.room.ingame) {
             return false;
         }
 

@@ -67,6 +67,11 @@ const commands = {
                 return;
             }
 
+            if (!autohost.ribbon.room.settings.players.find(player => player._id === kickRecipient)) {
+                autohost.sendMessage(username, "That player is not in the lobby.");
+                return;
+            }
+
             if (kickRecipient !== user) {
                 autohost.ribbon.room.kickPlayer(kickRecipient);
                 autohost.sendMessage(username, `Kicked ${args[0].toUpperCase()}.`);
@@ -410,6 +415,11 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: async function (user, username, args, autohost) {
+            if (autohost.host === botUserID) {
+                autohost.sendMessage(username, "This room is persistent and doesn't have a human host. If you have an issue, contact Zudo#0800 on Discord.");
+                return;
+            }
+
             const host = await getUser(autohost.host);
 
             if (host) {
@@ -426,6 +436,11 @@ const commands = {
         handler: async function (user, username, args, autohost) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !opponent <username>");
+                return;
+            }
+
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end.");
                 return;
             }
 

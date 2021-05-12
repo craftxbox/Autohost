@@ -107,7 +107,7 @@ const RULES = {
             return `You cannot play as you have been consistently exceeding the room's APM limit`;
         },
         description(value) {
-            return `Maximum APM: ${value}`;
+            return `Maximum APM: ${value !== 0 ? value : "no limit"}`;
         }
     }
 };

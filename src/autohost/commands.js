@@ -546,6 +546,12 @@ const commands = {
                 autohost.sendMessage(username, "Example: !set meta.match.ft=7;game.options.gmargin=7200");
                 return;
             }
+
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end before changing lobby settings.");
+                return;
+            }
+
             const config = parse(args.join(" "));
             autohost.ribbon.room.setRoomConfig(config);
             autohost.sendMessage(username, "Room configuration updated.");
@@ -560,6 +566,13 @@ const commands = {
                 autohost.sendMessage(username, "Usage: !name <room name>");
                 return;
             }
+
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end before changing lobby settings.");
+                return;
+            }
+
+
             const name = args.join(" ");
             autohost.ribbon.room.setName(name);
             autohost.sendMessage(username, "Room name updated.");
@@ -656,6 +669,33 @@ const commands = {
             } catch (e) {
                 autohost.sendMessage(username, "Eval failed: " + e.toString());
             }
+        }
+    },
+    code: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length === 0) {
+                autohost.sendMessage(username, "Usage: !code <room code>");
+                return;
+            }
+
+            const profile = await getUser(user);
+
+            if (!profile.supporter) {
+                autohost.sendMessage(username, "Only TETR.IO Supporters can change the room code. Please consider supporting osk by purchasing Supporter!");
+                return;
+            }
+
+            if (autohost.ribbon.room.ingame) {
+                autohost.sendMessage(username, "Please wait for the current game to end before changing the room code.");
+                return;
+            }
+
+            const name = args[0].toUpperCase().replace(/[^A-Z0-9]/g).substring(0, 16);
+            autohost.ribbon.room.setRoomID(name);
+            autohost.sendMessage(username, "Room code updated.");
         }
     }
 };

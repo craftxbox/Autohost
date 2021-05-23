@@ -59,7 +59,7 @@ const RULES = {
         },
         description(value) {
             if (value === "z") {
-                return "Maximum rank: none";
+                return "Maximum rank: no limit";
             } else {
                 return `Maximum rank: :rank${value.replace("+", "plus").replace("-", "minus")}:`;
             }
@@ -77,7 +77,7 @@ const RULES = {
         },
         description(value) {
             if (value === "z") {
-                return "Minimum rank: none";
+                return "Minimum rank: no limit";
             } else {
                 return `Minimum rank: :rank${value.replace("+", "plus").replace("-", "minus")}:`;
             }
@@ -101,13 +101,21 @@ const RULES = {
         type: Number,
         default: 0,
         check(value, user, autohost) {
-            return autohost.apmCalculator.banned.has(user._id);
+            return value > 0 && autohost.apmCalculator.banned.has(user.username);
         },
-        message() {
-            return `You cannot play as you have been consistently exceeding the room's APM limit`;
+        message(value) {
+            return `You cannot play as you have been consistently exceeding the room's APM limit (${value} APM)`;
         },
         description(value) {
             return `Maximum APM: ${value !== 0 ? value : "no limit"}`;
+        },
+        onchange(autohost, oldvalue, newvalue) {
+            if (newvalue > oldvalue) {
+                if (oldvalue > 0) {
+                    autohost.ribbon.sendChatMessage("The APM limit was increased. Players who previously exceeded the APM limit can now play again.");
+                }
+                autohost.apmCalculator.banned.clear();
+            }
         }
     }
 };

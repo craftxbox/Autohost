@@ -159,7 +159,10 @@ class Autohost extends EventEmitter {
         });
 
         this.ribbon.on("readymulti", data => {
+            this.apmCalculator.clearListenIDs();
             data.contexts.forEach(player => {
+                this.apmCalculator.addListenID(player.listenID, player.user.username);
+
                 this.checkPlayerEligibility(player.user._id).then(ineligible => {
                     if (ineligible) {
                         this.ribbon.room.kickPlayer(player.user._id);
@@ -184,6 +187,10 @@ class Autohost extends EventEmitter {
                     data: playerID
                 });
             });
+        });
+
+        this.ribbon.on("replayexpectend", gameover => {
+            this.apmCalculator.die(gameover.listenID);
         });
 
         this.ribbon.on("endmulti", endstate => {

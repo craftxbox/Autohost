@@ -183,7 +183,6 @@ const commands = {
             }
 
             const rule = RULES[args[0].toLowerCase()];
-
             let newvalue = args[1].toLowerCase();
 
             if (rule.type instanceof Array && rule.type.indexOf(newvalue) === -1) {
@@ -200,7 +199,12 @@ const commands = {
                 newvalue = ["yes", "y", "true", "1"].indexOf(newvalue.toLowerCase()) !== -1;
             }
 
+            const oldvalue = autohost.rules[args[0].toLowerCase()];
             autohost.rules[args[0].toLowerCase()] = newvalue;
+
+            if (rule.onchange) {
+                rule.onchange(autohost, oldvalue, newvalue);
+            }
 
             autohost.sendMessage(username, `Rule updated:\n\n${rule.description(newvalue)}`);
             autohost.recheckPlayers();
@@ -219,8 +223,12 @@ const commands = {
             }
 
             const rule = RULES[args[0].toLowerCase()];
-
+            const oldvalue = autohost.rules[args[0].toLowerCase()];
             autohost.rules[args[0].toLowerCase()] = rule.default;
+
+            if (rule.onchange) {
+                rule.onchange(autohost, oldvalue, rule.default);
+            }
 
             autohost.sendMessage(username, `Rule unset:\n\n${rule.description(rule.default)}`);
 

@@ -1,3 +1,5 @@
+const {pushMessage} = require("../pushover/pushover");
+
 class APMCalculator {
 
     constructor(autohost) {
@@ -62,6 +64,9 @@ class APMCalculator {
         if (normalisedAPM > this.max) {
             this.banned.add(username);
             this.autohost.sendMessage(username, `You exceeded this room's APM limit throughout the game, and as such can no longer play in this room.`);
+            if (this.autohost.persist) {
+                pushMessage("User " + username + " exceeded the APM limit in a persist lobby. Room: " + this.autohost.ribbon.room.id + ", APM: " + normalisedAPM + ", limit: " + this.max);
+            }
         }
     }
 

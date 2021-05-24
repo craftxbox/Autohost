@@ -101,7 +101,7 @@ const RULES = {
         type: Number,
         default: 0,
         check(value, user, autohost) {
-            return value > 0 && autohost.apmCalculator.banned.has(user.username);
+            return value > 0 && autohost.apmCalculator.infractions.get(user.username) >= 3;
         },
         message(value) {
             return `You cannot play as you have been consistently exceeding the room's APM limit (${value} APM)`;
@@ -118,7 +118,7 @@ const RULES = {
                 if (oldvalue > 0) {
                     autohost.ribbon.sendChatMessage("The APM limit was increased. Players who previously exceeded the APM limit can now play again.");
                 }
-                autohost.apmCalculator.banned.clear();
+                autohost.apmCalculator.infractions.clear();
             }
         }
     }

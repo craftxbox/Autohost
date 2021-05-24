@@ -110,6 +110,10 @@ const RULES = {
             return `Maximum APM: ${value !== 0 ? value : "no limit"}`;
         },
         onchange(autohost, oldvalue, newvalue) {
+            if (oldvalue === 0) {
+                autohost.ribbon.sendChatMessage("Please note that APM limits are still in development, and may not behave as expected. Be generous with your APM limits, as low limits may inadvertently exclude legitimate players.");
+            }
+
             if (newvalue > oldvalue) {
                 if (oldvalue > 0) {
                     autohost.ribbon.sendChatMessage("The APM limit was increased. Players who previously exceeded the APM limit can now play again.");

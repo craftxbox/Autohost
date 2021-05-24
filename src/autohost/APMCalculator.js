@@ -11,7 +11,7 @@ class APMCalculator {
         this.listenIDToUsernameMap = new Map();
         this.usernameToListenIDMap = new Map();
 
-        this.banned = new Set();
+        this.infractions = new Map();
     }
 
     clearListenIDs() {
@@ -53,17 +53,30 @@ class APMCalculator {
 
         const duration = Date.now() - this.startTime;
 
-        // don't punish players for short games
-        if (duration < 15000) return;
+        // don't punish players for very short games
+        if (duration < 30000) return;
 
         const attack = this.apmMap.get(listenID);
-        const normalisedAPM = Math.floor(((attack/duration) * 1000 * 60) / this.multiplier * 10) / 10;
+        const normalisedAPM = Math.floor(((attack / duration) * 1000 * 60) / this.multiplier * 10) / 10;
 
         const username = this.listenIDToUsernameMap.get(listenID);
 
-        if (normalisedAPM > this.max) {
-            this.banned.add(username);
-            this.autohost.sendMessage(username, `You exceeded this room's APM limit throughout the game, and as such can no longer play in this room.`);
+        let infractions = this.infractions.get(username);
+
+        if (normalisedAPM > this.max+20) {
+            infractions += 3;
+        } else if (normalisedAPM > this.max+10) {
+            infractions += 2;
+        } else if (normalisedAPM > this.max) {
+            infractions += 1;
+        } else if (infractions > 0) {
+            infractions--;
+        }
+
+        this.infractions.set(username, infractions);
+
+        if (infractions > 3 && normalisedAPM > this.max) {
+            this.autohost.sendMessage(username, `You have been exceeding this room's APM limit conistently, and as such can no longer play.`);
             if (this.autohost.persist) {
                 pushMessage("User " + username + " exceeded the APM limit in a persist lobby. Room: " + this.autohost.ribbon.room.id + ", APM: " + normalisedAPM + ", limit: " + this.max);
             }

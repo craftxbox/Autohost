@@ -69,7 +69,7 @@ class APMCalculator {
             infractions += 2;
         } else if (normalisedAPM > this.max) {
             infractions += 1;
-        } else {
+        } else if (infractions > 0) {
             infractions--;
         }
 

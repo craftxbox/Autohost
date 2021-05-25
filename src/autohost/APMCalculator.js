@@ -54,14 +54,14 @@ class APMCalculator {
         const duration = Date.now() - this.startTime;
 
         // don't punish players for very short games
-        if (duration < 30000) return;
+        if (duration < 20000) return;
 
         const attack = this.apmMap.get(listenID);
         const normalisedAPM = Math.floor(((attack / duration) * 1000 * 60) / this.multiplier * 10) / 10;
 
         const username = this.listenIDToUsernameMap.get(listenID);
 
-        let infractions = this.infractions.get(username);
+        let infractions = this.infractions.get(username) || 0;
 
         if (normalisedAPM > this.max+20) {
             infractions += 3;
@@ -73,9 +73,11 @@ class APMCalculator {
             infractions--;
         }
 
+        console.log(`${username} died with ${normalisedAPM} APM (infractions = ${infractions})`);
+
         this.infractions.set(username, infractions);
 
-        if (infractions > 3 && normalisedAPM > this.max) {
+        if (infractions >= 3 && normalisedAPM > this.max) {
             this.autohost.sendMessage(username, `You have been exceeding this room's APM limit conistently, and as such can no longer play.`);
             if (this.autohost.persist) {
                 pushMessage("User " + username + " exceeded the APM limit in a persist lobby. Room: " + this.autohost.ribbon.room.id + ", APM: " + normalisedAPM + ", limit: " + this.max);

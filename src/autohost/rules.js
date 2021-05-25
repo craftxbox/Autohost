@@ -100,7 +100,7 @@ const RULES = {
     max_apm: {
         type: Number,
         default: 0,
-        check(value, user, autohost) {á
+        check(value, user, autohost) {
             return value > 0 && autohost.apmCalculator.infractions.get(user.username) >= 3;
         },
         message(value) {

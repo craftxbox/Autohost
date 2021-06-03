@@ -176,7 +176,7 @@ class Autohost extends EventEmitter {
                     const count = parseInt(await getForcedPlayCount()) || 23; // default to a sensible number if it doesn't work
                     this.ribbon.sendChatMessage(`You thought there would be some funny easter egg here, didn't you, ${name}? Did you think I'd start playing at 5000 APM or something? Seriously?`);
                     this.ribbon.sendChatMessage(`I'm trying my best to help people, and this absolute COMEDIAN over here thought it'd be HILARIOUS to force a room moderation bot into the players bracket.`);
-                    this.ribbon.sendChatMessage(`Now watch as, for the ${ordinal(count+1)} time in my life, I get kicked from the server. I don't get paid for this you know.`);
+                    this.ribbon.sendChatMessage(`Now watch as, for the ${ordinal(count+1)} time in my life, I get kicked from the server. I don't get paid for this, you know.`);
                     await incrementForcedPlayCount();
                 } else {
                     this.ribbon.sendChatMessage("Please avoid starting the game while in host mode, as this can lead to unexpected behaviour.");

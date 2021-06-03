@@ -65,6 +65,10 @@ class Autohost extends EventEmitter {
                 this.usernamesToIds.delete(profile.username.toLowerCase());
             }
 
+            if (this.host === leave) {
+                this.ribbon.room.takeOwnership();
+            }
+
             if (this.twoPlayerChallenger === leave) {
                 this.twoPlayerChallenger = undefined;
                 this.nextChallenger();

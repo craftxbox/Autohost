@@ -62,6 +62,7 @@ class APMCalculator {
         const username = this.listenIDToUsernameMap.get(listenID);
 
         let infractions = this.infractions.get(username) || 0;
+        const lastInfractions = infractions;
 
         if (normalisedAPM > this.max+20) {
             infractions += 3;
@@ -77,11 +78,14 @@ class APMCalculator {
 
         this.infractions.set(username, infractions);
 
-        if (infractions >= 3 && normalisedAPM > this.max) {
-            this.autohost.sendMessage(username, `You have been exceeding this room's APM limit consistently, and as such can no longer play.`);
+        if (infractions >= 4 && normalisedAPM > this.max) {
+            this.autohost.sendMessage(username, `You have been exceeding this room's APM limit consistently, and as such can no longer play. (${infractions} infractions)`);
+
             if (this.autohost.persist) {
                 pushMessage("User " + username + " exceeded the APM limit in a persist lobby. Room: " + this.autohost.ribbon.room.id + ", APM: " + normalisedAPM + ", limit: " + this.max);
             }
+        } else if (lastInfractions > infractions) {
+            this.autohost.sendMessage(username, `You exceeded this room's APM limit during this game. Please respect the other players in the room by playing at their level in the next game. (${infractions} infractions)`);
         }
     }
 

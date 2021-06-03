@@ -69,4 +69,25 @@ function setMOTD(motd) {
     });
 }
 
-module.exports = {getLobby, setLobby, deleteLobby, getAllLobbies, getMOTD, setMOTD};
+function getForcedPlayCount() {
+    return new Promise(resolve => {
+        client.get("forced_play_count", (err, res) => {
+            if (err) {
+                resolve(0);
+            } else {
+                resolve(res);
+            }
+        })
+    });
+}
+
+function incrementForcedPlayCount() {
+    return new Promise((resolve, reject) => {
+        client.incr("forced_play_count", err => {
+            if (err) return reject(err);
+            resolve();
+        })
+    });
+}
+
+module.exports = {getLobby, setLobby, deleteLobby, getAllLobbies, getMOTD, setMOTD, getForcedPlayCount, incrementForcedPlayCount};

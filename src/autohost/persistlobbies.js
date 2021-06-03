@@ -18,9 +18,9 @@ function persistLobby_S(ah) {
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
-    ah.rules.anons_allowed = false;
+    ah.rules.anons_allowed = true;
     ah.rules.max_rank = "s";
-    ah.rules.max_apm = 40;
+    ah.rules.max_apm = 45;
 
     ah.autostart = 10;
 
@@ -47,9 +47,9 @@ function persistLobby_SS(ah) {
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
-    ah.rules.anons_allowed = false;
+    ah.rules.anons_allowed = true;
     ah.rules.max_rank = "ss";
-    ah.rules.max_apm = 55;
+    ah.rules.max_apm = 60;
 
     ah.autostart = 10;
 

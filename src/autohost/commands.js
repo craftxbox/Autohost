@@ -5,6 +5,9 @@ const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
 const {RULES} = require("./rules");
 
+const EIGHTBALL_RESPONSES = ["It is Certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.", "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy, try again.", "Ask again later.", "Better not tell you now.", "Cannot predict now.", "Concentrate and ask again.", "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful."];
+const RPS = ["rock", "paper", "scissors"];
+
 const commands = {
     sip: {
         hostonly: false,
@@ -12,6 +15,65 @@ const commands = {
         devonly: false,
         handler: function (user, username, args, autohost) {
             autohost.ribbon.sendChatMessage(":serikasip:");
+        }
+    },
+    "8ball": {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            if (args.length === 0) {
+                autohost.sendMessage(username, "Usage: !8ball <question>");
+                return;
+            }
+            autohost.sendMessage(username, EIGHTBALL_RESPONSES[Math.floor(Math.random()*EIGHTBALL_RESPONSES.length)]);
+        }
+    },
+    roll: {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            let value;
+
+            if (args[0]) {
+                value = parseInt(args[0]);
+                if (value < 1) {
+                    autohost.sendMessage(username, "Unless you can make a die that transcends the laws of mathematics, I can't do that.");
+                    return;
+                } else if (value === 1) {
+                    autohost.sendMessage(username, "You rolled... 1. Who could have predicted that?");
+                    return;
+                }
+            } else {
+                value = 6;
+            }
+
+
+            autohost.sendMessage(username, "You rolled " + (Math.floor(Math.random()*value)+1) + "!");
+        }
+    },
+    rps: {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        handler: function (user, username, args, autohost) {
+            if (args.length !== 1 || RPS.indexOf(args[0].toLowerCase()) === -1) {
+                autohost.sendMessage(username, "Usage: !rps <rock|paper|scissors>");
+                return;
+            }
+
+            const userTry = args[0].toLowerCase();
+            const botTry = RPS[Math.floor(Math.random()*3)];
+
+            // could i write this better? sure, but it's 4am.
+            if ((botTry === "rock" && userTry === "scissors") || (botTry === "paper" && userTry === "rock") || (botTry === "scissors" && userTry === "paper")) {
+                autohost.sendMessage(username, "I chose " + botTry + ". I win!");
+            } else if ((userTry === "rock" && botTry === "scissors") || (userTry === "paper" && botTry === "rock") || (userTry === "scissors" && botTry === "paper")) {
+                autohost.sendMessage(username, "I chose " + botTry + ". You win!");
+            } else {
+                autohost.sendMessage(username, "I chose " + botTry + ". It's a tie!");
+            }
         }
     },
     help: {
@@ -489,7 +551,7 @@ const commands = {
                 autohost.sendMessage(username, "You can't queue against yourself in a 1v1.");
                 return;
             }
-          
+
             const rulesMessage = checkAll(autohost.rules, await getUser(user), autohost);
 
             if (rulesMessage) {
@@ -654,14 +716,14 @@ const commands = {
 
                 for (const i in autohost.twoPlayerQueue) {
                     if (autohost.twoPlayerQueue.hasOwnProperty(i)) {
-                        usernames.push("#" + (parseInt(i)+1) + ": " + (await autohost.getPlayerData(autohost.twoPlayerQueue[i])).username.toUpperCase());
+                        usernames.push("#" + (parseInt(i) + 1) + ": " + (await autohost.getPlayerData(autohost.twoPlayerQueue[i])).username.toUpperCase());
                     }
                 }
 
                 const challenger = autohost.twoPlayerChallenger ? (await autohost.getPlayerData(autohost.twoPlayerChallenger)).username.toUpperCase() : "(challenger)";
                 const opponent = (await autohost.getPlayerData(autohost.twoPlayerOpponent)).username.toUpperCase();
 
-                autohost.sendMessage(username, `${opponent} vs ${challenger}\n\n${usernames.length > 0 ? usernames.join("\n"): "Queue is empty."}`);
+                autohost.sendMessage(username, `${opponent} vs ${challenger}\n\n${usernames.length > 0 ? usernames.join("\n") : "Queue is empty."}`);
             } else {
                 autohost.sendMessage(username, "The queue is off.");
             }

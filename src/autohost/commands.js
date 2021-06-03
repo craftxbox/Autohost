@@ -81,7 +81,7 @@ const commands = {
         modonly: false,
         devonly: false,
         handler: function (user, username, args, autohost) {
-            autohost.ribbon.sendChatMessage("For a list of commands, type !commands. For detailed help, to contribute code or to create a bug report, visit the project homepage:\n\nhttps://kagar.in/autohost\n\nAutohost is developed by Zudo (Zudo#0800 on Discord) - feel free to send me any feedback!");
+            autohost.ribbon.sendChatMessage("For detailed help, including a list of commands, visit the project homepage:\n\nhttps://kagar.in/autohost\n\nAutohost is developed by Zudo (Zudo#0800 on Discord) - feel free to send me any feedback!");
         }
     },
     kick: {
@@ -221,6 +221,7 @@ const commands = {
             }
 
             autohost.ribbon.room.setRoomConfig(presets[args[0].toLowerCase()]);
+
             autohost.sendMessage(username, `Switched to ${args[0].toUpperCase()} preset.`);
         }
     },

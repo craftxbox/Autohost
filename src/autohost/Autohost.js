@@ -3,9 +3,11 @@ const EventEmitter = require("events");
 const api = require("../gameapi/api");
 const commands = require("./commands");
 const APMCalculator = require("./APMCalculator");
+const {getForcedPlayCount, incrementForcedPlayCount} = require("../redis/redis");
 const {TWO_PLAYER_MODES} = require("../data/enums");
 const {isDeveloper} = require("../data/developers");
 const {checkAll} = require("./rules");
+const ordinal = require("ordinal");
 
 class Autohost extends EventEmitter {
 
@@ -143,6 +145,11 @@ class Autohost extends EventEmitter {
             if (commands.hasOwnProperty(command)) {
                 const commandObj = commands[command];
 
+                if (!this.ribbon.room.isHost && commandObj.needhost) {
+                    this.sendMessage(username, "The host needs to exit !hostmode before you can run this command.");
+                    return;
+                }
+
                 if (!dev && commandObj.devonly) {
                     this.sendMessage(username, "This command is only available for developers.");
                     return;
@@ -162,7 +169,22 @@ class Autohost extends EventEmitter {
             }
         });
 
-        this.ribbon.on("readymulti", data => {
+        this.ribbon.on("readymulti", async data => {
+            if (!this.ribbon.room.isHost) {
+                if (this.ribbon.room.players.indexOf(botUserID) !== -1) {
+                    const name = (await this.getPlayerData(this.ribbon.room.settings.owner)).username?.toUpperCase();
+                    const count = parseInt(await getForcedPlayCount()) || 23; // default to a sensible number if it doesn't work
+                    this.ribbon.sendChatMessage(`You thought there would be some funny easter egg here, didn't you, ${name}? Did you think I'd start playing at 5000 APM or something? Seriously?`);
+                    this.ribbon.sendChatMessage(`I'm trying my best to help people, and this absolute COMEDIAN over here thought it'd be HILARIOUS to force a room moderation bot into the players bracket.`);
+                    this.ribbon.sendChatMessage(`Now watch as, for the ${ordinal(count+1)} time in my life, I get kicked from the server. I don't get paid for this you know.`);
+                    await incrementForcedPlayCount();
+                } else {
+                    this.ribbon.sendChatMessage("Please avoid starting the game while in host mode, as this can lead to unexpected behaviour.");
+                }
+            }
+
+            this.ribbon.room.takeOwnership();
+
             this.apmCalculator.clearListenIDs();
             data.contexts.forEach(player => {
                 this.apmCalculator.addListenID(player.listenID, player.user.username);
@@ -181,7 +203,7 @@ class Autohost extends EventEmitter {
         this.ribbon.on("startmulti", () => {
             setTimeout(() => {
                 this.apmCalculator.start();
-            },  8000); // roughly account for the cutin/countdown
+            }, 8000); // roughly account for the cutin/countdown
 
             // ok this seems to work, but i'm not sure
             // `startscope` seems to prompt the server to send replay data, which we Really Want™

@@ -5,7 +5,7 @@ const DEFAULTS = "meta.userlimit=0;meta.bgm=RANDOM;meta.match.type=versus;meta.m
 const PRESET_STRINGS = {
     "classic": "game.options.bagtype=classic;game.options.spinbonuses=none;game.options.allow180=0;game.options.kickset=NRS;game.options.allow_harddrop=0;game.options.display_hold=0;game.options.nextcount=1;game.options.display_shadow=0;game.options.are=8;game.options.lineclear_are=18;game.options.room_handling=1;game.options.room_handling_arr=5;game.options.room_handling_das=16;game.options.room_handling_sdf=6;game.options.gincrease=0.0005;game.options.locktime=8;game.options.clutch=0",
     "nestrio": "game.options.bagtype=classic;game.options.display_hold=0;game.options.display_hold=1;game.options.nextcount=1",
-    "ppt": "game.options.allow180=0;game.options.are=7;game.options.kickset=SRS;game.options.lineclear_are=30;game.options.room_handling=1;game.options.room_handling_arr=2;game.options.room_handling_das=9;game.options.room_handling_sdf=10;game.options.g=0.03;game.options.gincrease=0;game.options.garbageincrease=0;game.options.garbagespeed=30;game.options.garbagecap=7;game.options.b2bchaining=0;game.options.clutch=0"
+    "ppt": "game.options.allow180=0;game.options.are=7;game.options.kickset=SRS;game.options.lineclear_are=30;game.options.room_handling=1;game.options.room_handling_arr=2;game.options.room_handling_das=10;game.options.room_handling_sdf=10;game.options.g=0.03;game.options.gincrease=0;game.options.garbageincrease=0;game.options.garbagespeed=30;game.options.garbagecap=7;game.options.b2bchaining=0;game.options.clutch=0"
 };
 
 const presets = {};

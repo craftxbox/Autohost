@@ -9,6 +9,7 @@ const {serialise, deserialise} = require("./redis/serialiser");
 const {randomBytes} = require("crypto");
 
 const persistLobbies = require("./autohost/persistlobbies");
+const {pushMessage} = require("./pushover/pushover");
 
 require("dotenv").config({path: path.join(__dirname, "../.env")});
 
@@ -89,7 +90,7 @@ function restoreLobbies() {
                         console.log("Something's gone horribly wrong!");
                     }
                 }
-            })
+            });
 
             ribbon.once("joinroom", () => {
                 ribbon.room.takeOwnership();
@@ -139,6 +140,12 @@ function applyRoomEvents(ah, ribbon, host, id) {
         redis.setLobby(id, config).then(() => {
             console.log("Saved lobby settings for " + id);
         });
+    });
+
+    ribbon.on("kick", kick => {
+        if (kick.reason === "this room was disbanded") {
+            pushMessage(`An Autohost room was disbanded by staff. Room ID: ${ribbon.room.id}, AH host: ${ah.host}`);
+        }
     });
 
     ribbon.on("dead", () => {

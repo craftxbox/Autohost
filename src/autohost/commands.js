@@ -28,7 +28,7 @@ const commands = {
                 autohost.sendMessage(username, "Usage: !8ball <question>");
                 return;
             }
-            autohost.sendMessage(username, EIGHTBALL_RESPONSES[Math.floor(Math.random()*EIGHTBALL_RESPONSES.length)]);
+            autohost.sendMessage(username, EIGHTBALL_RESPONSES[Math.floor(Math.random() * EIGHTBALL_RESPONSES.length)]);
         }
     },
     roll: {
@@ -53,7 +53,7 @@ const commands = {
             }
 
 
-            autohost.sendMessage(username, "You rolled " + (Math.floor(Math.random()*value)+1) + "!");
+            autohost.sendMessage(username, "You rolled " + (Math.floor(Math.random() * value) + 1) + "!");
         }
     },
     rps: {
@@ -68,7 +68,7 @@ const commands = {
             }
 
             const userTry = args[0].toLowerCase();
-            const botTry = RPS[Math.floor(Math.random()*3)];
+            const botTry = RPS[Math.floor(Math.random() * 3)];
 
             // could i write this better? sure, but it's 4am.
             if ((botTry === "rock" && userTry === "scissors") || (botTry === "paper" && userTry === "rock") || (botTry === "scissors" && userTry === "paper")) {
@@ -801,6 +801,23 @@ const commands = {
             const name = args[0].toUpperCase().replace(/[^A-Z0-9]/g).substring(0, 16);
             autohost.ribbon.room.setRoomID(name);
             autohost.sendMessage(username, "Room code updated.");
+        }
+    },
+    disband: {
+        hostonly: true,
+        modonly: false,
+        devonly: true,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            autohost.ribbon.sendChatMessage("⚠ LOBBY IS BEING DISBANDED ⚠\n\nThis lobby will be closed in ten seconds. Please leave now.");
+            setTimeout(() => {
+                autohost.ribbon.room.settings.players.forEach(player => {
+                    if (player._id === botUserID) return;
+                    autohost.ribbon.room.kickPlayer(player._id);
+                });
+
+                autohost.emit("stop");
+            }, 10000);
         }
     }
 };

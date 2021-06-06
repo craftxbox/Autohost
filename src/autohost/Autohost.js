@@ -268,6 +268,10 @@ class Autohost extends EventEmitter {
 
                 const {message, rule} = checkAll(this.rules, user, this);
 
+                if (rule) {
+                    this.ribbon.room.switchPlayerBracket(user._id, "spectator");
+                }
+
                 const actualMotdID = motds.hasOwnProperty(this.motdID) ? this.motdID : "defaultMOTD";
 
                 motds[actualMotdID](this, join._id, user.username, rule, message).then(message => {

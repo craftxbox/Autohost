@@ -2,7 +2,7 @@ function persistLobby_S(ah) {
     ah.persist = true;
 
     ah.ribbon.room.setName("S AND BELOW ONLY");
-    ah.ribbon.room.setRoomID("NOOBROOM");
+    ah.ribbon.room.setRoomID("AUTOHOSTS");
 
     ah.ribbon.room.setRoomConfig([
         {
@@ -11,14 +11,12 @@ function persistLobby_S(ah) {
         }
     ]);
 
-    ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-    ah.motd_ineligible = "Welcome, $PLAYER. $REASON. Feel free to spectate, however please be respectful while doing so.";
-    ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-    ah.motd_empty_ineligible = "Welcome, $PLAYER. $REASON.";
+    ah.motdID = "persist";
+
+    ah.rules.anons_allowed = false;
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
-    ah.rules.anons_allowed = true;
     ah.rules.max_rank = "s";
     ah.rules.max_apm = 45;
 
@@ -31,7 +29,7 @@ function persistLobby_SS(ah) {
     ah.persist = true;
 
     ah.ribbon.room.setName("SS AND BELOW ONLY");
-    ah.ribbon.room.setRoomID("WOOMY");
+    ah.ribbon.room.setRoomID("AUTOHOSTSS");
 
     ah.ribbon.room.setRoomConfig([
         {
@@ -40,14 +38,12 @@ function persistLobby_SS(ah) {
         }
     ]);
 
-    ah.motd_empty = "Welcome, $PLAYER. This room will start automatically when another player joins.";
-    ah.motd_ineligible = "Welcome, $PLAYER. $REASON. Feel free to spectate, however please be respectful while doing so.";
-    ah.motd = "Welcome, $PLAYER. This room starts automatically - please wait for the next game.";
-    ah.motd_empty_ineligible = "Welcome, $PLAYER. $REASON.";
+    ah.motdID = "persist";
+
+    ah.rules.anons_allowed = false;
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
-    ah.rules.anons_allowed = true;
     ah.rules.max_rank = "ss";
     ah.rules.max_apm = 60;
 
@@ -56,4 +52,31 @@ function persistLobby_SS(ah) {
     ah.emit("configchange");
 }
 
-module.exports = {persistLobby_S, persistLobby_SS};
+function persistLobby_A(ah) {
+    ah.persist = true;
+
+    ah.ribbon.room.setName("A AND BELOW ONLY");
+    ah.ribbon.room.setRoomID("AUTOHOSTA");
+
+    ah.ribbon.room.setRoomConfig([
+        {
+            index: "meta.bgm",
+            value: "RANDOMbattle"
+        }
+    ]);
+
+    ah.motdID = "persist";
+
+    ah.rules.anons_allowed = false;
+
+    ah.rules.unrated_allowed = true;
+    ah.rules.rankless_allowed = true;
+    ah.rules.max_rank = "a";
+    ah.rules.max_apm = 35;
+
+    ah.autostart = 10;
+
+    ah.emit("configchange");
+}
+
+module.exports = {persistLobby_S, persistLobby_SS, persistLobby_A};

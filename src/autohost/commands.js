@@ -1,6 +1,6 @@
 const presets = require("../data/presets");
 const parse = require("../ribbon/configparser");
-const {checkAll} = require("./rules");
+const {checkAllLegacy} = require("./rules");
 const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
 const {RULES} = require("./rules");
@@ -588,7 +588,7 @@ const commands = {
                 return;
             }
 
-            const rulesMessage = checkAll(autohost.rules, await getUser(user), autohost);
+            const rulesMessage = checkAllLegacy(autohost.rules, await getUser(user), autohost);
 
             if (rulesMessage) {
                 autohost.sendMessage(username, rulesMessage + ".");

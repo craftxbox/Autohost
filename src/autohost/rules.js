@@ -128,7 +128,7 @@ function checkAll(ruleset, user, autohost) {
     for (const rule in RULES) {
         if (RULES.hasOwnProperty(rule)) {
             // default is a reserved keyword lol
-            const {check, message, default: defaultValue} = RULES[rule];
+            const {check, default: defaultValue, message} = RULES[rule];
 
             let value;
 
@@ -139,12 +139,19 @@ function checkAll(ruleset, user, autohost) {
             }
 
             if (check(value, user, autohost)) {
-                return message(value, user);
+                return {
+                    rule,
+                    message: message(value)
+                };
             }
         }
     }
 
-    return undefined;
+    return {id: undefined, message: undefined};
 }
 
-module.exports = {checkAll, RULES};
+function checkAllLegacy(ruleset, user, autohost) {
+    return checkAll(ruleset, user, autohost).message;
+}
+
+module.exports = {checkAll, checkAllLegacy, RULES};

@@ -77,7 +77,7 @@ class APMCalculator {
 
         this.infractions.set(username, infractions);
 
-        if (infractions >= 4 && normalisedAPM > this.max) {
+        if (infractions >= 3 && normalisedAPM > this.max) {
             this.autohost.sendMessage(username, `You have been exceeding this room's APM limit consistently, and as such can no longer play. (${infractions} infractions)`);
 
             if (this.autohost.persist) {

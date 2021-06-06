@@ -16,10 +16,7 @@ function serialise(autohost) {
     data.isPrivate = autohost.isPrivate;
     data.persist = autohost.persist;
     data.autostart = autohost.autostart;
-    data.motd = autohost.motd;
-    data.motd_empty = autohost.motd_empty;
-    data.motd_ineligible = autohost.motd_ineligible;
-    data.motd_empty_ineligible = autohost.motd_empty_ineligible;
+    data.motdID = autohost.motdID;
 
     return data;
 }
@@ -38,10 +35,7 @@ function deserialise(data, target) {
     target.twoPlayerChallenger = data.twoPlayerChallenger;
     target.twoPlayerOpponent = data.twoPlayerOpponent;
     target.twoPlayerQueue = data.twoPlayerQueue;
-    target.motd = data.motd;
-    target.motd_empty = data.motd_empty;
-    target.motd_ineligible = data.motd_ineligible;
-    target.motd_empty_ineligible = data.motd_empty_ineligible;
+    target.motdID = data.motdID;
 }
 
 module.exports = {serialise, deserialise};

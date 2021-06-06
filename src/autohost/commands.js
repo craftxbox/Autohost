@@ -106,7 +106,13 @@ const commands = {
             }
 
             const playerData = await autohost.getPlayerData(args[0]);
+
             const kickRecipient = playerData && playerData._id;
+
+            if (!kickRecipient) {
+                autohost.sendMessage(username, "That player does not exist.");
+                return;
+            }
 
             const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
 
@@ -166,6 +172,11 @@ const commands = {
 
             const playerData = await autohost.getPlayerData(args[0]);
             const banRecipient = playerData && playerData._id;
+
+            if (!banRecipient) {
+                autohost.sendMessage(username, "That player does not exist.");
+                return;
+            }
 
             const staff = ["admin", "mod"].indexOf(playerData.role) !== -1;
 

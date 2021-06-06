@@ -6,8 +6,9 @@ const APMCalculator = require("./APMCalculator");
 const {getForcedPlayCount, incrementForcedPlayCount} = require("../redis/redis");
 const {TWO_PLAYER_MODES} = require("../data/enums");
 const {isDeveloper} = require("../data/developers");
-const {checkAll} = require("./rules");
+const {checkAllLegacy, checkAll} = require("./rules");
 const ordinal = require("ordinal");
+const motds = require("./motds");
 
 class Autohost extends EventEmitter {
 
@@ -43,6 +44,8 @@ class Autohost extends EventEmitter {
         this.rules = {};
 
         this.autostart = 0;
+
+        this.motdID = "defaultMOTD";
 
         this.ribbon = ribbon;
 
@@ -202,8 +205,10 @@ class Autohost extends EventEmitter {
 
         this.ribbon.on("startmulti", () => {
             setTimeout(() => {
-                this.apmCalculator.start();
-            }, 8000); // roughly account for the cutin/countdown
+                if (this.ribbon.room.ingame) { // don't start if the game's already over
+                    this.apmCalculator.start();
+                }
+            }, 20000);
 
             // ok this seems to work, but i'm not sure
             // `startscope` seems to prompt the server to send replay data, which we Really Want™
@@ -261,52 +266,15 @@ class Autohost extends EventEmitter {
                 this.playerData.set(user._id, user);
                 this.usernamesToIds.set(user.username.toLowerCase(), user._id);
 
-                if (join._id === this.host) {
-                    this.ribbon.sendChatMessage(`Welcome to your room, ${join.username.toUpperCase()}!
-                    
-- Use !setrule to change the rules for this room.
-- Use !preset to enable special rulesets.
-- Use !autostart to allow the room to start automatically.
-- Use !hostmode to become the host, to adjust room settings.
-- Need more? Use !commands for a full list of commands. 
+                const {message, rule} = checkAll(this.rules, user, this);
 
-When you're ready to start, type !start.`);
-                } else {
-                    const ineligibleMessage = checkAll(this.rules, user, this);
+                const actualMotdID = motds.hasOwnProperty(this.motdID) ? this.motdID : "defaultMOTD";
 
-                    if (ineligibleMessage) {
-                        if (this.ribbon.room.memberCount > 1) {
-                            this.ribbon.sendChatMessage(this.motd_ineligible ?
-                                this.motd_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()).replace(/\$REASON/g, ineligibleMessage) :
-                                `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
-                        } else {
-                            this.ribbon.sendChatMessage(this.motd_empty_ineligible ?
-                                this.motd_empty_ineligible.replace(/\$PLAYER/g, user.username.toUpperCase()).replace(/\$REASON/g, ineligibleMessage) :
-                                `Welcome, ${join.username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
-                        }
-                    } else {
-                        if (this.twoPlayerOpponent) {
-                            this.getPlayerData(this.twoPlayerOpponent).then(opponent => {
-                                this.ribbon.sendChatMessage(`Welcome, ${user.username.toUpperCase()}. Type !queue to join the 1v1 queue against ${opponent.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
-                            });
-                        } else {
-                            if (this.ribbon.room.memberCount > 1) {
-                                this.ribbon.sendChatMessage(this.motd ?
-                                    this.motd.replace(/\$PLAYER/g, user.username.toUpperCase()) :
-                                    `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
-                            } else {
-                                this.ribbon.sendChatMessage(this.motd_empty ?
-                                    this.motd_empty.replace(/\$PLAYER/g, user.username.toUpperCase()) :
-                                    `Welcome, ${user.username.toUpperCase()}.${isDeveloper(join._id) ? " :serikasip:" : ""}`);
-                            }
-                        }
-                        return;
+                motds[actualMotdID](this, join._id, user.username, rule, message).then(message => {
+                    if (message) {
+                        this.ribbon.sendChatMessage(message);
                     }
-
-                    if (this.ribbon.room.isHost) {
-                        this.ribbon.room.switchPlayerBracket(user._id, "spectator");
-                    }
-                }
+                });
             });
         });
     }
@@ -324,7 +292,7 @@ When you're ready to start, type !start.`);
             return;
         }
 
-        return checkAll(this.rules, playerData, this);
+        return checkAllLegacy(this.rules, playerData, this);
     }
 
     get roomID() {

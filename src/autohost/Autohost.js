@@ -127,6 +127,11 @@ class Autohost extends EventEmitter {
 
             const message = chat.content.trim();
 
+            if (message.startsWith(">teto ")) {
+                this.ribbon.sendChatMessage(":mahoblush:");
+                return;
+            }
+
             if (!message.startsWith("!")) return; // ignore not commands
 
             const username = chat.user.username;

@@ -122,7 +122,7 @@ function applyRoomEvents(ah, ribbon, host, id) {
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
-            console.log("Deleted lobby settings for " + id);
+            console.log("Deleted lobby settings for session " + id);
         });
     });
 
@@ -131,14 +131,14 @@ function applyRoomEvents(ah, ribbon, host, id) {
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
-            console.log("Deleted lobby settings for " + id);
+            console.log("Deleted lobby settings for " + ribbon.room.id);
         });
     });
 
     ah.on("configchange", () => {
         const config = serialise(ah);
         redis.setLobby(id, config).then(() => {
-            console.log("Saved lobby settings for " + id);
+            console.log("Saved lobby settings for " + ribbon.room.id);
         });
     });
 
@@ -175,7 +175,7 @@ function createLobby(host, isPrivate, fixedID) {
             const config = serialise(ah);
 
             redis.setLobby(id, config).then(() => {
-                console.log("Saved initial lobby settings for " + host);
+                console.log("Saved initial lobby settings for " + ribbon.room.id);
             });
 
             api.getUser(host).then(user => {

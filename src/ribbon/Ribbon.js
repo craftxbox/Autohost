@@ -171,7 +171,8 @@ class Ribbon extends EventEmitter {
     }
 
     log(message) {
-        console.log(`[${this.socket_id || "new ribbon"}/${this.room ? this.room.id : "no room"}] ${message}`);
+        // console.log(`[${this.socket_id || "new ribbon"}/${this.room ? this.room.id : "no room"}] ${message}`);
+        this.emit("ah-log", message);
     }
 
     sendMessageImmediate(message) {

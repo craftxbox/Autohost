@@ -9,6 +9,7 @@ const {isDeveloper} = require("../data/developers");
 const {checkAllLegacy, checkAll} = require("./rules");
 const ordinal = require("ordinal");
 const motds = require("./motds");
+const chalk = require("chalk");
 
 class Autohost extends EventEmitter {
 
@@ -48,6 +49,10 @@ class Autohost extends EventEmitter {
         this.motdID = "defaultMOTD";
 
         this.ribbon = ribbon;
+
+        this.ribbon.on("ah-log", message => {
+            this.log("[RIBBON] " + message);
+        });
 
         this.ribbon.room.on("playersupdate", () => {
             if (this.ribbon.room.memberCount === 1 && !this.persist && this.someoneDidJoin) {
@@ -184,7 +189,7 @@ class Autohost extends EventEmitter {
                     const count = parseInt(await getForcedPlayCount()) || 23; // default to a sensible number if it doesn't work
                     this.ribbon.sendChatMessage(`You thought there would be some funny easter egg here, didn't you, ${name}? Did you think I'd start playing at 5000 APM or something? Seriously?`);
                     this.ribbon.sendChatMessage(`I'm trying my best to help people, and this absolute COMEDIAN over here thought it'd be HILARIOUS to force a room moderation bot into the players bracket.`);
-                    this.ribbon.sendChatMessage(`Now watch as, for the ${ordinal(count+1)} time in my life, I get kicked from the server. I don't get paid for this, you know.`);
+                    this.ribbon.sendChatMessage(`Now watch as, for the ${ordinal(count + 1)} time in my life, I get kicked from the server. I don't get paid for this, you know.`);
                     await incrementForcedPlayCount();
                 } else {
                     this.ribbon.sendChatMessage("Please avoid starting the game while in host mode, as this can lead to unexpected behaviour.");
@@ -200,9 +205,9 @@ class Autohost extends EventEmitter {
                 this.checkPlayerEligibility(player.user._id).then(ineligible => {
                     if (ineligible) {
                         this.ribbon.room.kickPlayer(player.user._id);
-                        console.log(player.user._id + " failed final check.");
+                        this.log(player.user._id + " failed final check.");
                     } else {
-                        console.log(player.user._id + " verified for play.");
+                        this.log(player.user._id + " verified for play.");
                     }
                 });
             });
@@ -288,6 +293,20 @@ class Autohost extends EventEmitter {
         });
     }
 
+    log(message) {
+        const rulesString = Object.keys(this.rules).map(rule => {
+            return rule.split("_").map(part => part[0]).join("").toUpperCase() + "=" + this.rules[rule];
+        }).join(",") || "NoRules";
+
+        // Upper case = true, lower case = false
+        // H = host mode, or other player host?
+        // G = game in progress?
+        // O = 1v1 mode?
+        // P = persist?
+        const flagsString = (this.ribbon?.room?.settings?.owner !== botUserID ? "H" : "h") + (this.ribbon.room.ingame ? "G" : "g") + (this.twoPlayerOpponent ? "O" : "o") + (this.persist ? "P" : "p");
+        console.log(`${chalk.redBright(new Date().toLocaleString())} ${chalk.greenBright(this.ribbon?.socket_id)} ${chalk.yellowBright(this.roomID)} ${chalk.blueBright(this.host)} ${chalk.magentaBright(rulesString)} ${chalk.whiteBright(flagsString)}\n${chalk.white("> " + message.replace(/\n/g, "<line break>"))}`);
+    }
+
     async checkPlayerEligibility(player) {
         if (this.twoPlayerOpponent) {
             const elMessage = this.check2pEligibility(player);
@@ -326,7 +345,7 @@ class Autohost extends EventEmitter {
         if (this.playerData.has(player)) {
             return this.playerData.get(player);
         } else {
-            console.log("Loading player data for " + player);
+            this.log("Loading player data for " + player);
             const data = await api.getUser(player);
             if (data) {
                 this.playerData.set(data._id, data);

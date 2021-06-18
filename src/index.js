@@ -9,6 +9,7 @@ const {serialise, deserialise} = require("./redis/serialiser");
 const {randomBytes} = require("crypto");
 
 const persistLobbies = require("./autohost/persistlobbies");
+const chalk = require("chalk");
 const {pushMessage} = require("./pushover/pushover");
 
 require("dotenv").config({path: path.join(__dirname, "../.env")});
@@ -244,6 +245,8 @@ api.getMe().then(user => {
         const user = message.data.user;
 
         if (message.data.userdata.role === "bot") return;
+
+        console.log(chalk.whiteBright(`[DM] ${user}: ${message.data.content}`));
 
         redis.getMOTD().then(motd => {
             if (motd) {

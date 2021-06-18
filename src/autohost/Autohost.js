@@ -28,11 +28,19 @@ class Autohost extends EventEmitter {
 
         this.apmCalculator = new APMCalculator(this);
 
+        /** cache for player info **/
         this.playerData = new Map();
+        /** cache for username lookup **/
         this.usernamesToIds = new Map();
+        /** banned users **/
         this.bannedUsers = new Map();
+        /** moderators **/
         this.moderatorUsers = new Map();
+        /** users who were !allowed **/
         this.allowedUsers = new Map();
+
+        /** users who have already seen the motd **/
+        this.welcomedUsers = new Set();
 
         this.twoPlayerMode = TWO_PLAYER_MODES.STATIC_HOTSEAT;
 
@@ -285,8 +293,10 @@ class Autohost extends EventEmitter {
                 const actualMotdID = motds.hasOwnProperty(this.motdID) ? this.motdID : "defaultMOTD";
 
                 motds[actualMotdID](this, join._id, user.username, rule, message).then(message => {
-                    if (message) {
+                    if (message && !this.welcomedUsers.has(join._id)) {
                         this.ribbon.sendChatMessage(message);
+                        this.welcomedUsers.add(join._id);
+                        this.emit("updateconfig");
                     }
                 });
             });

@@ -820,6 +820,7 @@ const commands = {
         devonly: true,
         needhost: false,
         handler: function (user, username, args, autohost) {
+            autohost.ribbon.clearChat();
             autohost.ribbon.sendChatMessage("⚠ LOBBY IS BEING DISBANDED ⚠\n\nThis lobby will be closed in ten seconds. Please leave now.");
             setTimeout(() => {
                 autohost.ribbon.room.settings.players.forEach(player => {

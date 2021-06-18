@@ -177,6 +177,12 @@ function createLobby(host, isPrivate, fixedID) {
                 ah.ribbon.once("gmupdate", () => {
                     botMain.sendDM(host, `Lobby created! Join #${ribbon.room.id}`);
                     ribbon.socialInvite(host);
+                    setTimeout(() => {
+                        if (!ah.someoneDidJoin) {
+                            ah.emit("stop");
+                            botMain.sendDM(host, "Your lobby timed out because you didn't join in time. Create another one to continue.");
+                        }
+                    }, 25000);
                     resolve(ah);
                 });
 

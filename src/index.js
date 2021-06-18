@@ -114,11 +114,7 @@ function restoreLobbies() {
 
 function applyRoomEvents(ah, ribbon, host, id) {
     ah.on("end", () => {
-        if (host === "5eeaa5535b5c156c224f5265") { // you saw nothing, do not say anything
-            botMain.sendDM(host, `I finished up aww the wowk in youw wobby, senpai! I wuv you >w<`);
-        } else {
-            botMain.sendDM(host, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
-        }
+        botMain.sendDM(host, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
@@ -127,7 +123,6 @@ function applyRoomEvents(ah, ribbon, host, id) {
     });
 
     ah.on("stop", () => {
-        botMain.sendDM(host, `I've left your lobby.`);
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {

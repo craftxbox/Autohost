@@ -1,7 +1,7 @@
 {
     "name": "autohost",
     "version": "1.0.0",
-    "description": " A bot for osk's TETR.IO that allows for additional host features in custom games.",
+    "description": "A bot for osk's TETR.IO that allows for additional host features in custom games.",
     "author": {
         "name": "Zudo",
         "url": "https://kagar.in"

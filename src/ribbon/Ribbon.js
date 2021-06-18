@@ -337,6 +337,10 @@ class Ribbon extends EventEmitter {
     sendChatMessage(message) {
         this.sendMessage({command: "chat", data: message});
     }
+
+    clearChat() {
+        this.sendMessage({command: "clearchat"});
+    }
 }
 
 module.exports = Ribbon;

@@ -52,11 +52,11 @@ function persistLobby_SS(ah) {
     ah.emit("configchange");
 }
 
-function persistLobby_A(ah) {
+function persistLobby_Bplus(ah) {
     ah.persist = true;
 
-    ah.ribbon.room.setName("A AND BELOW ONLY");
-    ah.ribbon.room.setRoomID("AUTOHOSTA");
+    ah.ribbon.room.setName("B+ AND BELOW ONLY");
+    ah.ribbon.room.setRoomID("AUTOHOSTBPLUS");
 
     ah.ribbon.room.setRoomConfig([
         {
@@ -71,12 +71,12 @@ function persistLobby_A(ah) {
 
     ah.rules.unrated_allowed = true;
     ah.rules.rankless_allowed = true;
-    ah.rules.max_rank = "a";
-    ah.rules.max_apm = 35;
+    ah.rules.max_rank = "b+";
+    ah.rules.max_apm = 30;
 
     ah.autostart = 10;
 
     ah.emit("configchange");
 }
 
-module.exports = {persistLobby_S, persistLobby_SS, persistLobby_A};
+module.exports = {persistLobby_S, persistLobby_SS, persistLobby_Bplus};

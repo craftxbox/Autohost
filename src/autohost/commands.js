@@ -1,5 +1,6 @@
 const presets = require("../data/presets");
 const parse = require("../ribbon/configparser");
+const {getBan} = require("../data/globalbans");
 const {checkAllLegacy} = require("./rules");
 const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
@@ -359,6 +360,13 @@ const commands = {
                 return;
             }
 
+            const ban = getBan(newHost, ["host"]);
+
+            if (ban) {
+                autohost.sendMessage(username, "That player is not eligible to become the host.");
+                return;
+            }
+
             if (!autohost.ribbon.room.isHost) {
                 autohost.ribbon.room.takeOwnership()
             }
@@ -480,6 +488,13 @@ const commands = {
 
             if (isDeveloper(modRecipient)) {
                 autohost.sendMessage(username, "This player is the developer of Autohost, no need to mod them.")
+                return;
+            }
+
+            const ban = getBan(modRecipient, ["host"]);
+
+            if (ban) {
+                autohost.sendMessage(username, "That player is not eligible to become a room moderator.");
                 return;
             }
 

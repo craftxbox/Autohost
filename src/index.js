@@ -1,7 +1,10 @@
+const path = require("path");
+
+require("dotenv").config({path: path.join(__dirname, "../.env")});
+
 const Ribbon = require("./ribbon/Ribbon");
 const Autohost = require("./autohost/Autohost");
 
-const path = require("path");
 const api = require("./gameapi/api");
 const redis = require("./redis/redis");
 const {isDeveloper} = require("./data/developers");
@@ -10,9 +13,8 @@ const {randomBytes} = require("crypto");
 
 const persistLobbies = require("./autohost/persistlobbies");
 const chalk = require("chalk");
+const {getBan} = require("./data/globalbans");
 const {pushMessage} = require("./pushover/pushover");
-
-require("dotenv").config({path: path.join(__dirname, "../.env")});
 
 if (!process.env.TOKEN) {
     console.log("Please specify a TETR.IO bot token in the TOKEN environment variable.");
@@ -248,11 +250,12 @@ api.getMe().then(user => {
 
         console.log(chalk.whiteBright(`[DM] ${user}: ${message.data.content}`));
 
-        redis.getMOTD().then(motd => {
-            if (motd) {
-                botMain.sendDM(user, "MOTD: " + motd);
-            }
-        })
+        const ban = getBan(user, ["host"]);
+
+        if (ban) {
+            botMain.sendDM(user, "You have been banned from hosting Autohost lobbies until " + new Date(ban.expires).toDateString() + " for the following reason: " + ban.reason);
+            return;
+        }
 
         const lobby = getHostLobby(user);
 
@@ -266,14 +269,6 @@ api.getMe().then(user => {
                 botMain.sendDM(user, "You already have a lobby open. Join #" + lobby.ribbon.room.id);
             } else {
                 createLobby(user, msg === "!private");
-            }
-        } else if (msg.startsWith("!motd") && isDeveloper(user)) {
-            const args = msg.split(" ");
-            args.shift();
-            if (args.length === 0) {
-                redis.setMOTD("");
-            } else {
-                redis.setMOTD(args.join(" "));
             }
         } else {
             botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");

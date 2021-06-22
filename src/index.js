@@ -253,7 +253,7 @@ api.getMe().then(user => {
         const ban = getBan(user, ["host"]);
 
         if (ban) {
-            botMain.sendDM(user, "You have been banned from hosting Autohost lobbies until " + new Date(ban.expires).toDateString() + " for the following reason: " + ban.reason);
+            botMain.sendDM(user, `You have been banned from hosting Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`);
             return;
         }
 

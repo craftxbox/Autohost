@@ -732,9 +732,11 @@ const commands = {
 
             const allowRecipient = await autohost.getUserID(args[0]);
 
-            if (autohost.ribbon.room.players.indexOf(allowRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(allowRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
-                return;
+            const ban = getBan(allowRecipient, ["participation", "participation-persist"]);
+
+            if (ban && ((autohost.persist && ban.type === "participation-persist") || ban.type === "participation")) {
+                autohost.sendMessage(username, "You cannot allow this player while they have an active participation ban.");
+                return
             }
 
             autohost.allowPlayer(allowRecipient, args[0]);

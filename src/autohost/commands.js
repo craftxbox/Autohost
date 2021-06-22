@@ -830,7 +830,7 @@ const commands = {
         }
     },
     disband: {
-        hostonly: true,
+        hostonly: false,
         modonly: false,
         devonly: true,
         needhost: false,
@@ -845,6 +845,28 @@ const commands = {
 
                 autohost.emit("stop");
             }, 10000);
+        }
+    },
+    joinoff: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            autohost.motdID = "disabled";
+            autohost.sendMessage(username, "Join messages have been turned off.");
+            autohost.emit("configchange");
+        }
+    },
+    joinon: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            autohost.motdID = "defaultMOTD";
+            autohost.sendMessage(username, "Join messages have been turned on.");
+            autohost.emit("configchange");
         }
     }
 };

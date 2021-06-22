@@ -48,7 +48,7 @@ async function persist(autohost, userID, username, ruleID, ineligibleMessage) {
         if (ruleID === "anons_allowed") {
             message = `Welcome, ${username.toUpperCase()}. If you wish to play in this lobby, please join again on a registered TETR.IO account - this helps us stop smurfs from ruining the game. Thanks for understanding!`;
         } else if (ruleID === "max_rank") {
-            message = `Welcome, ${username.toUpperCase()}. Unfortunately, your rank is too high to participate in this room. Feel free to spectate, however.`
+            message = `Welcome, ${username.toUpperCase()}. Unfortunately, your rank is too high to participate in this room. However, feel free to spectate.`;
         } else {
             message = `Welcome, ${username.toUpperCase()}. ${ineligibleMessage}.`;
         }

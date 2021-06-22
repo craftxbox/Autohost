@@ -1,5 +1,6 @@
 const presets = require("../data/presets");
 const parse = require("../ribbon/configparser");
+const {getBan} = require("../data/globalbans");
 const {checkAllLegacy} = require("./rules");
 const {getUser} = require("../gameapi/api");
 const {isDeveloper} = require("../data/developers");
@@ -359,6 +360,13 @@ const commands = {
                 return;
             }
 
+            const ban = getBan(newHost, ["host"]);
+
+            if (ban) {
+                autohost.sendMessage(username, "That player is not eligible to become the host.");
+                return;
+            }
+
             if (!autohost.ribbon.room.isHost) {
                 autohost.ribbon.room.takeOwnership()
             }
@@ -480,6 +488,13 @@ const commands = {
 
             if (isDeveloper(modRecipient)) {
                 autohost.sendMessage(username, "This player is the developer of Autohost, no need to mod them.")
+                return;
+            }
+
+            const ban = getBan(modRecipient, ["host"]);
+
+            if (ban) {
+                autohost.sendMessage(username, "That player is not eligible to become a room moderator.");
                 return;
             }
 
@@ -717,9 +732,11 @@ const commands = {
 
             const allowRecipient = await autohost.getUserID(args[0]);
 
-            if (autohost.ribbon.room.players.indexOf(allowRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(allowRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
-                return;
+            const ban = getBan(allowRecipient, ["participation", "participation-persist"]);
+
+            if (ban && ((autohost.persist && ban.type === "participation-persist") || ban.type === "participation")) {
+                autohost.sendMessage(username, "You cannot allow this player while they have an active participation ban.");
+                return
             }
 
             autohost.allowPlayer(allowRecipient, args[0]);
@@ -815,11 +832,12 @@ const commands = {
         }
     },
     disband: {
-        hostonly: true,
+        hostonly: false,
         modonly: false,
         devonly: true,
         needhost: false,
         handler: function (user, username, args, autohost) {
+            autohost.ribbon.clearChat();
             autohost.ribbon.sendChatMessage("⚠ LOBBY IS BEING DISBANDED ⚠\n\nThis lobby will be closed in ten seconds. Please leave now.");
             setTimeout(() => {
                 autohost.ribbon.room.settings.players.forEach(player => {
@@ -829,6 +847,28 @@ const commands = {
 
                 autohost.emit("stop");
             }, 10000);
+        }
+    },
+    joinoff: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            autohost.motdID = "disabled";
+            autohost.sendMessage(username, "Join messages have been turned off.");
+            autohost.emit("configchange");
+        }
+    },
+    joinon: {
+        hostonly: true,
+        modonly: false,
+        devonly: false,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            autohost.motdID = "defaultMOTD";
+            autohost.sendMessage(username, "Join messages have been turned on.");
+            autohost.emit("configchange");
         }
     }
 };

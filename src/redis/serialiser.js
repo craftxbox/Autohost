@@ -17,6 +17,9 @@ function serialise(autohost) {
     data.persist = autohost.persist;
     data.autostart = autohost.autostart;
     data.motdID = autohost.motdID;
+    data.someoneDidJoin = autohost.someoneDidJoin;
+    data.welcomedUsers = [...autohost.welcomedUsers];
+    data.creationTime = autohost.creationTime;
 
     return data;
 }
@@ -36,6 +39,9 @@ function deserialise(data, target) {
     target.twoPlayerOpponent = data.twoPlayerOpponent;
     target.twoPlayerQueue = data.twoPlayerQueue;
     target.motdID = data.motdID;
+    target.someoneDidJoin = data.someoneDidJoin;
+    target.welcomedUsers = new Set(data.welcomedUsers);
+    target.creationTime = data.creationTime;
 }
 
 module.exports = {serialise, deserialise};

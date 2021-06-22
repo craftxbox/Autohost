@@ -4,7 +4,7 @@ const EventEmitter = require("events");
 const Room = require("./Room");
 const api = require("../gameapi/api");
 
-const CLIENT_VERSION = {"id":"0c0ebf5","time":1624230874000};
+const CLIENT_VERSION = {"id": "0c0ebf5", "time": 1624230874000};
 
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
@@ -336,6 +336,10 @@ class Ribbon extends EventEmitter {
 
     sendChatMessage(message) {
         this.sendMessage({command: "chat", data: message});
+    }
+
+    clearChat() {
+        this.sendMessage({command: "clearchat"});
     }
 }
 

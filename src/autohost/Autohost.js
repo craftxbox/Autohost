@@ -20,6 +20,9 @@ class Autohost extends EventEmitter {
             throw new Error("Ribbon should be connected to a lobby!");
         }
 
+        this.creationTime = Date.now();
+        this.timeoutWarned = false;
+
         this.persist = false;
         this.isPrivate = isPrivate;
         this.host = host;
@@ -28,11 +31,19 @@ class Autohost extends EventEmitter {
 
         this.apmCalculator = new APMCalculator(this);
 
+        /** cache for player info **/
         this.playerData = new Map();
+        /** cache for username lookup **/
         this.usernamesToIds = new Map();
+        /** banned users **/
         this.bannedUsers = new Map();
+        /** moderators **/
         this.moderatorUsers = new Map();
+        /** users who were !allowed **/
         this.allowedUsers = new Map();
+
+        /** users who have already seen the motd **/
+        this.welcomedUsers = new Set();
 
         this.twoPlayerMode = TWO_PLAYER_MODES.STATIC_HOTSEAT;
 
@@ -285,12 +296,30 @@ class Autohost extends EventEmitter {
                 const actualMotdID = motds.hasOwnProperty(this.motdID) ? this.motdID : "defaultMOTD";
 
                 motds[actualMotdID](this, join._id, user.username, rule, message).then(message => {
-                    if (message) {
+                    if (message && !this.welcomedUsers.has(join._id)) {
                         this.ribbon.sendChatMessage(message);
+                        this.welcomedUsers.add(join._id);
+                        this.emit("updateconfig");
                     }
                 });
             });
         });
+
+        setInterval(() => {
+            if (this.persist || this.ribbon.room.settings.type === "private") return;
+            if (Date.now() - this.creationTime >= 28200000 && !this.timeoutWarned) { // 7 hours 50 minutes
+                this.ribbon.clearChat();
+                this.ribbon.sendChatMessage("⚠ LOBBY TIMEOUT WARNING ⚠\n\nTo prevent abuse, public Autohost lobbies time out after eight hours. This lobby will time out soon, so please finish up your games. Thank you!");
+                this.timeoutWarned = true;
+            } else if (Date.now() - this.creationTime >= 2.88e+7) { // 8 hours
+                this.ribbon.room.settings.players.forEach(player => {
+                    if (player._id === botUserID) return;
+                    this.ribbon.room.kickPlayer(player._id);
+                });
+
+                this.emit("stop");
+            }
+        }, 10000);
     }
 
     log(message) {
@@ -304,7 +333,7 @@ class Autohost extends EventEmitter {
         // O = 1v1 mode?
         // P = persist?
         const flagsString = (this.ribbon?.room?.settings?.owner !== botUserID ? "H" : "h") + (this.ribbon.room.ingame ? "G" : "g") + (this.twoPlayerOpponent ? "O" : "o") + (this.persist ? "P" : "p");
-        console.log(`${chalk.redBright(new Date().toLocaleString())} ${chalk.greenBright(this.ribbon?.socket_id)} ${chalk.yellowBright(this.roomID)} ${chalk.blueBright(this.host)} ${chalk.magentaBright(rulesString)} ${chalk.whiteBright(flagsString)}\n${chalk.white("> " + message.replace(/\n/g, "<line break>"))}`);
+        console.log(`${chalk.redBright(new Date().toLocaleString())} ${chalk.greenBright(this.ribbon?.socket_id)} ${chalk.yellowBright(this.roomID)} ${chalk.blueBright(this.host)} ${chalk.magentaBright(rulesString)} ${chalk.whiteBright(flagsString)}\n${chalk.whiteBright("> " + message.replace(/\n/g, "<line break>"))}`);
     }
 
     async checkPlayerEligibility(player) {

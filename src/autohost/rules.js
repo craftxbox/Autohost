@@ -1,3 +1,4 @@
+const {getBan} = require("../data/globalbans");
 const RANK_HIERARCHY = ["d", "d+", "c-", "c", "c+", "b-", "b", "b+", "a-", "a", "a+", "s-", "s", "s+", "ss", "u", "x"];
 
 function xpToLevel(xp) {
@@ -125,6 +126,22 @@ const RULES = {
 };
 
 function checkAll(ruleset, user, autohost) {
+    const ban = getBan(user._id, ["participation", "participation-persist"]);
+
+    if (ban) {
+        if (autohost.persist && ban.type === "participation-persist") {
+            return {
+                rule: "globalban",
+                message: `You have been banned from participating in unattended Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`
+            }
+        } else if (ban.type === "participation") {
+            return {
+                rule: "globalban",
+                message: `You have been banned from participating in ALL Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`
+            }
+        }
+    }
+
     for (const rule in RULES) {
         if (RULES.hasOwnProperty(rule)) {
             // default is a reserved keyword lol
@@ -147,7 +164,7 @@ function checkAll(ruleset, user, autohost) {
         }
     }
 
-    return {id: undefined, message: undefined};
+    return {rule: undefined, message: undefined};
 }
 
 function checkAllLegacy(ruleset, user, autohost) {

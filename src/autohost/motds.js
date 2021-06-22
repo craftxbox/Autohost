@@ -1,5 +1,9 @@
 const {isDeveloper} = require("../data/developers");
 
+function disabled() {
+    return Promise.resolve();
+}
+
 async function defaultMOTD(autohost, userID, username, ruleID, ineligibleMessage) {
     let message;
 
@@ -43,14 +47,20 @@ async function persist(autohost, userID, username, ruleID, ineligibleMessage) {
     if (ruleID) {
         if (ruleID === "anons_allowed") {
             message = `Welcome, ${username.toUpperCase()}. If you wish to play in this lobby, please join again on a registered TETR.IO account - this helps us stop smurfs from ruining the game. Thanks for understanding!`;
+        } else if (ruleID === "max_rank") {
+            message = `Welcome, ${username.toUpperCase()}. Unfortunately, your rank is too high to participate in this room. However, feel free to spectate.`;
         } else {
-            message = `Welcome, ${username.toUpperCase()}. ${ineligibleMessage}.`
+            message = `Welcome, ${username.toUpperCase()}. ${ineligibleMessage}.`;
         }
     } else {
         if (autohost.ribbon.room.ingame) {
             message = `Welcome, ${username.toUpperCase()}. This room starts automatically - please wait for the next game!`;
         } else {
-            message = `Welcome, ${username.toUpperCase()}. The game is about to start, good luck!`;
+            if (autohost.ribbon.room.players.length > 1) {
+                message = `Welcome, ${username.toUpperCase()}. The game is about to start, good luck!`;
+            } else {
+                message = `Welcome, ${username.toUpperCase()}. The game will start when another player joins.`
+            }
         }
     }
 
@@ -61,4 +71,4 @@ async function persist(autohost, userID, username, ruleID, ineligibleMessage) {
     return message;
 }
 
-module.exports = {defaultMOTD, persist};
+module.exports = {defaultMOTD, persist, disabled};

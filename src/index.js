@@ -1,7 +1,10 @@
+const path = require("path");
+
+require("dotenv").config({path: path.join(__dirname, "../.env")});
+
 const Ribbon = require("./ribbon/Ribbon");
 const Autohost = require("./autohost/Autohost");
 
-const path = require("path");
 const api = require("./gameapi/api");
 const redis = require("./redis/redis");
 const {isDeveloper} = require("./data/developers");
@@ -9,9 +12,9 @@ const {serialise, deserialise} = require("./redis/serialiser");
 const {randomBytes} = require("crypto");
 
 const persistLobbies = require("./autohost/persistlobbies");
+const chalk = require("chalk");
+const {getBan} = require("./data/globalbans");
 const {pushMessage} = require("./pushover/pushover");
-
-require("dotenv").config({path: path.join(__dirname, "../.env")});
 
 if (!process.env.TOKEN) {
     console.log("Please specify a TETR.IO bot token in the TOKEN environment variable.");
@@ -114,11 +117,7 @@ function restoreLobbies() {
 
 function applyRoomEvents(ah, ribbon, host, id) {
     ah.on("end", () => {
-        if (host === "5eeaa5535b5c156c224f5265") { // you saw nothing, do not say anything
-            botMain.sendDM(host, `I finished up aww the wowk in youw wobby, senpai! I wuv you >w<`);
-        } else {
-            botMain.sendDM(host, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
-        }
+        botMain.sendDM(host, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
@@ -127,7 +126,6 @@ function applyRoomEvents(ah, ribbon, host, id) {
     });
 
     ah.on("stop", () => {
-        botMain.sendDM(host, `I've left your lobby.`);
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
@@ -182,6 +180,12 @@ function createLobby(host, isPrivate, fixedID) {
                 ah.ribbon.once("gmupdate", () => {
                     botMain.sendDM(host, `Lobby created! Join #${ribbon.room.id}`);
                     ribbon.socialInvite(host);
+                    setTimeout(() => {
+                        if (!ah.someoneDidJoin) {
+                            ah.emit("stop");
+                            botMain.sendDM(host, "Your lobby timed out because you didn't join in time. Create another one to continue.");
+                        }
+                    }, 25000);
                     resolve(ah);
                 });
 
@@ -244,11 +248,14 @@ api.getMe().then(user => {
 
         if (message.data.userdata.role === "bot") return;
 
-        redis.getMOTD().then(motd => {
-            if (motd) {
-                botMain.sendDM(user, "MOTD: " + motd);
-            }
-        })
+        console.log(chalk.whiteBright(`[DM] ${user}: ${message.data.content}`));
+
+        const ban = getBan(user, ["host"]);
+
+        if (ban) {
+            botMain.sendDM(user, `You have been banned from hosting Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`);
+            return;
+        }
 
         const lobby = getHostLobby(user);
 
@@ -262,14 +269,6 @@ api.getMe().then(user => {
                 botMain.sendDM(user, "You already have a lobby open. Join #" + lobby.ribbon.room.id);
             } else {
                 createLobby(user, msg === "!private");
-            }
-        } else if (msg.startsWith("!motd") && isDeveloper(user)) {
-            const args = msg.split(" ");
-            args.shift();
-            if (args.length === 0) {
-                redis.setMOTD("");
-            } else {
-                redis.setMOTD(args.join(" "));
             }
         } else {
             botMain.sendDM(user, "Hi there! Type !private to create a private lobby, or !public to create a public lobby.");

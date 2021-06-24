@@ -445,6 +445,7 @@ class Autohost extends EventEmitter {
             }
             this.autostartTimer = setTimeout(() => {
                 this.start();
+                this.autostartTimer = undefined;
             }, this.autostart * 1000);
         }
     }

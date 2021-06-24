@@ -305,7 +305,7 @@ class Autohost extends EventEmitter {
             });
         });
 
-        setInterval(() => {
+        this.timeoutInterval = setInterval(() => {
             if (this.persist || this.ribbon.room.settings.type === "private") return;
             if (Date.now() - this.creationTime >= 28200000 && !this.timeoutWarned) { // 7 hours 50 minutes
                 this.ribbon.clearChat();
@@ -318,6 +318,7 @@ class Autohost extends EventEmitter {
                 });
 
                 this.emit("stop");
+                clearInterval(this.timeoutInterval);
             }
         }, 10000);
     }
@@ -336,7 +337,7 @@ class Autohost extends EventEmitter {
         console.log(`${chalk.redBright(new Date().toLocaleString())} ${chalk.greenBright(this.ribbon?.socket_id)} ${chalk.yellowBright(this.roomID)} ${chalk.blueBright(this.host)} ${chalk.magentaBright(rulesString)} ${chalk.whiteBright(flagsString)}\n${chalk.whiteBright("> " + message.replace(/\n/g, "<line break>"))}`);
     }
 
-    async checkPlayerEligibility(player) {
+    async checkPlayerEligibility(player) {player
         if (this.twoPlayerOpponent) {
             const elMessage = this.check2pEligibility(player);
             if (elMessage) return elMessage;
@@ -444,6 +445,7 @@ class Autohost extends EventEmitter {
             }
             this.autostartTimer = setTimeout(() => {
                 this.start();
+                this.autostartTimer = undefined;
             }, this.autostart * 1000);
         }
     }

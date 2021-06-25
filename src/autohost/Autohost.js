@@ -528,6 +528,13 @@ class Autohost extends EventEmitter {
 
         this.ribbon.room.start();
     }
+
+    destroy() {
+        this.ribbon.disconnectGracefully();
+        clearTimeout(this.autostartTimer);
+        clearInterval(this.timeoutInterval);
+        this.emit("stop");
+    }
 }
 
 module.exports = Autohost;

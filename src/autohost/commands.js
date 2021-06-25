@@ -423,7 +423,7 @@ const commands = {
         needhost: false,
         handler: function (user, username, args, autohost) {
             autohost.ribbon.room.transferOwnership(user);
-            autohost.emit("stop");
+            autohost.destroy();
         }
     },
     persist: {
@@ -845,7 +845,7 @@ const commands = {
                     autohost.ribbon.room.kickPlayer(player._id);
                 });
 
-                autohost.emit("stop");
+                autohost.destroy();
             }, 10000);
         }
     },

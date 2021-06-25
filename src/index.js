@@ -116,8 +116,9 @@ function restoreLobbies() {
 }
 
 function applyRoomEvents(ah, ribbon, host, id) {
-    ah.on("end", () => {
+    ah.once("end", () => {
         botMain.sendDM(host, `Your lobby has been closed because everyone left. Type !private or !public to start a new one.`);
+        ah.destroy();
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
@@ -125,7 +126,7 @@ function applyRoomEvents(ah, ribbon, host, id) {
         });
     });
 
-    ah.on("stop", () => {
+    ah.once("stop", () => {
         ribbon.disconnectGracefully();
         sessions.delete(id);
         redis.deleteLobby(id).then(() => {
@@ -146,7 +147,7 @@ function applyRoomEvents(ah, ribbon, host, id) {
         }
     });
 
-    ribbon.on("dead", () => {
+    ribbon.once("dead", () => {
         console.log("Ribbon died! Attempting restore.");
         ribbon.disconnectGracefully();
         sessions.delete(id);
@@ -182,7 +183,7 @@ function createLobby(host, isPrivate, fixedID) {
                     ribbon.socialInvite(host);
                     setTimeout(() => {
                         if (!ah.someoneDidJoin) {
-                            ah.emit("stop");
+                            ah.destroy();
                             botMain.sendDM(host, "Your lobby timed out because you didn't join in time. Create another one to continue.");
                         }
                     }, 25000);

@@ -4,8 +4,6 @@ const EventEmitter = require("events");
 const Room = require("./Room");
 const api = require("../gameapi/api");
 
-const CLIENT_VERSION = {"id":"bc71089","time":1624632896000};
-
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
 const RIBBON_PREFIXES = {
@@ -74,12 +72,14 @@ function ribbonEncode(message) { // todo: perhaps we should actually follow tetr
 
 class Ribbon extends EventEmitter {
 
-    constructor(token) {
+    constructor(token, version) {
         super();
 
         this.lastEndpoint = RIBBON_ENDPOINT;
 
         this.token = token;
+        this.version = version;
+
         this.dead = false;
         this.open = false;
         this.authed = false;
@@ -270,7 +270,7 @@ class Ribbon extends EventEmitter {
                                 safelock: false
                             },
                             signature: {
-                                commit: CLIENT_VERSION
+                                commit: this.version
                             }
                         }
                     });

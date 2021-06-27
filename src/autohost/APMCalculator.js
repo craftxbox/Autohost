@@ -1,4 +1,5 @@
 const {pushMessage} = require("../pushover/pushover");
+const chalk = require("chalk");
 
 class APMCalculator {
 
@@ -14,6 +15,10 @@ class APMCalculator {
         this.infractions = new Map();
     }
 
+    log(message) {
+        console.log(chalk.blueBright(`[APMCalculator] [${new Date().toLocaleString()}] ${message}`));
+    }
+
     clearListenIDs() {
         this.listenIDToUsernameMap.clear();
         this.usernameToListenIDMap.clear();
@@ -27,7 +32,7 @@ class APMCalculator {
     start() {
         if (!this.autohost.rules.max_apm) return;
 
-        console.log("Starting APM calculator");
+        this.log("Starting APM calculator");
 
         this.ready = true;
 
@@ -39,7 +44,7 @@ class APMCalculator {
     }
 
     addGarbageIGE(sender, attack) {
-        if (!this.ready) return;
+        if (!this.ready || !this.usernameToListenIDMap.has(sender)) return;
 
         const listenID = this.usernameToListenIDMap.get(sender);
 
@@ -49,7 +54,7 @@ class APMCalculator {
     }
 
     die(listenID) {
-        if (!this.ready) return;
+        if (!this.ready || !this.listenIDToUsernameMap.has(listenID)) return;
 
         const duration = Date.now() - this.startTime;
 
@@ -63,9 +68,9 @@ class APMCalculator {
 
         let infractions = this.infractions.get(username) || 0;
 
-        if (normalisedAPM > this.max+20) {
+        if (normalisedAPM > this.max + 20) {
             infractions += 3;
-        } else if (normalisedAPM > this.max+10) {
+        } else if (normalisedAPM > this.max + 10) {
             infractions += 2;
         } else if (normalisedAPM > this.max) {
             infractions += 1;
@@ -73,7 +78,7 @@ class APMCalculator {
             infractions--;
         }
 
-        console.log(`${username} died with ${normalisedAPM} APM (infractions = ${infractions})`);
+        this.log(`${username} died with ${normalisedAPM} APM (infractions = ${infractions})`);
 
         this.infractions.set(username, infractions);
 
@@ -81,10 +86,10 @@ class APMCalculator {
             this.autohost.sendMessage(username, `You have been exceeding this room's APM limit consistently, and as such can no longer play. (${infractions} infractions)`);
 
             if (this.autohost.persist) {
-                pushMessage("User " + username + " exceeded the APM limit in a persist lobby. Room: " + this.autohost.ribbon.room.id + ", APM: " + normalisedAPM + ", limit: " + this.max);
+                pushMessage(`User ${username} exceeded the APM limit in a persist lobby. Room: ${this.autohost.ribbon.room.id}, APM: ${normalisedAPM}, limit: ${this.max}`);
             }
         } else if (normalisedAPM > this.max) {
-            this.autohost.sendMessage(username, `You exceeded this room's APM limit during this game. Please respect the other players in the room by playing at their level in the next game. (${infractions} infractions)`);
+            this.autohost.sendMessage(username, `You exceeded this room's APM limit during this game. Please respect the other players in the room by playing at their level in the next game. (${infractions} infraction${Math.abs(infractions) !== 1 ? "s" : ""})`);
         }
     }
 

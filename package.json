@@ -1,6 +1,6 @@
 {
     "name": "autohost",
-    "version": "1.0.0",
+    "version": "2.1.0",
     "description": "A bot for osk's TETR.IO that allows for additional host features in custom games.",
     "author": {
         "name": "Zudo",

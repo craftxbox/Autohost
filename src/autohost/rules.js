@@ -25,7 +25,7 @@ const RULES = {
         default: true,
         check(value, user) {
             // check: unrated NOT allowed AND *percentile* rank is unranked
-            return !value && user.league.percentile_rank === "z"
+            return !value && user.league.percentile_rank === "z";
         },
         message() {
             return "Players who have not completed their Tetra League rating games cannot play in this room";
@@ -39,7 +39,7 @@ const RULES = {
         default: true,
         check(value, user) {
             // check: rankless NOT allowed AND rank is unranked
-            return !value && user.league.rank === "z"
+            return !value && user.league.rank === "z";
         },
         message() {
             return "Players without a rank letter cannot play in this room";
@@ -111,7 +111,7 @@ const RULES = {
             return `Maximum APM: ${value !== 0 ? value : "no limit"}`;
         },
         onchange(autohost, oldvalue, newvalue) {
-            if (oldvalue === 0) {
+            if (!oldvalue) {
                 autohost.ribbon.sendChatMessage("Please note that APM limits are still in development, and may not behave as expected. Be generous with your APM limits, as low limits may inadvertently exclude legitimate players.");
             }
 

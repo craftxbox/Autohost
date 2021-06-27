@@ -1,7 +1,10 @@
-// noinspection DuplicatedCode
+const FIELDS = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime", "persistKey", "apmLimitExemption"];
 
-const FIELDS = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime"];
-
+/**
+ * Takes an Autohost instance and converts it to JSON that's safe for sticking in Redis.
+ * @param {Autohost} autohost The Autohost instance.
+ * @returns {Object} A JSON object.
+ */
 function serialise(autohost) {
     const data = {};
 
@@ -17,6 +20,11 @@ function serialise(autohost) {
     return data;
 }
 
+/**
+ * Takes a JSON object returned by {@link serialise} and applies the contained settings to an Autohost instance.
+ * @param {Object} data The serialised data.
+ * @param {Autohost} target The target Autohost instance.
+ */
 function deserialise(data, target) {
     FIELDS.forEach(field => {
         if (target[field] instanceof Map) {

@@ -1,3 +1,5 @@
+const {APM_LIMIT_EXEMPTIONS} = require("../data/enums");
+
 function persistLobby_S(ah) {
     ah.persist = true;
 
@@ -20,9 +22,9 @@ function persistLobby_S(ah) {
     ah.rules.max_rank = "s";
     ah.rules.max_apm = 45;
 
-    ah.autostart = 10;
+    ah.apmLimitExemption = APM_LIMIT_EXEMPTIONS.RANKED;
 
-    ah.emit("configchange");
+    ah.autostart = 10;
 }
 
 function persistLobby_SS(ah) {
@@ -47,9 +49,9 @@ function persistLobby_SS(ah) {
     ah.rules.max_rank = "ss";
     ah.rules.max_apm = 60;
 
-    ah.autostart = 10;
+    ah.apmLimitExemption = APM_LIMIT_EXEMPTIONS.RANKED;
 
-    ah.emit("configchange");
+    ah.autostart = 10;
 }
 
 function persistLobby_Bplus(ah) {
@@ -74,9 +76,9 @@ function persistLobby_Bplus(ah) {
     ah.rules.max_rank = "b+";
     ah.rules.max_apm = 30;
 
-    ah.autostart = 10;
+    ah.apmLimitExemption = APM_LIMIT_EXEMPTIONS.RANKED;
 
-    ah.emit("configchange");
+    ah.autostart = 10;
 }
 
-module.exports = {persistLobby_S, persistLobby_SS, persistLobby_Bplus};
+module.exports = {persistLobby_Bplus, persistLobby_S, persistLobby_SS};

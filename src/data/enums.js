@@ -1,6 +1,11 @@
 const TWO_PLAYER_MODES = {
     "STATIC_HOTSEAT": 0,
-        "DYNAMIC_HOTSEAT": 1
+    "DYNAMIC_HOTSEAT": 1
 };
 
-module.exports = {TWO_PLAYER_MODES};
+const APM_LIMIT_EXEMPTIONS = {
+    "NONE": 0,
+    "RANKED": 1
+};
+
+module.exports = {TWO_PLAYER_MODES, APM_LIMIT_EXEMPTIONS};

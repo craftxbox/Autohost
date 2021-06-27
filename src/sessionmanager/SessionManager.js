@@ -3,6 +3,7 @@ const Autohost = require("../autohost/Autohost");
 const crypto = require("crypto");
 const chalk = require("chalk");
 const api = require("../gameapi/api");
+const {pushMessage} = require("../pushover/pushover");
 const {setLobby, deleteLobby, getLobby, getAllLobbies} = require("../redis/redis");
 const {serialise, deserialise} = require("../redis/serialiser");
 
@@ -203,6 +204,10 @@ class SessionManager {
     createLobby(host, isPrivate) {
         return new Promise((resolve, reject) => {
             api.getRibbonVersion().then(version => {
+                if (global.ribbonVersion !== version) {
+                    pushMessage(`Ribbon version changed mid session. Check for breaking changes. ${global.ribbonVersion.id} -> ${version.id}`);
+                }
+
                 global.ribbonVersion = version;
 
                 const ribbon = new Ribbon(process.env.TOKEN, version);

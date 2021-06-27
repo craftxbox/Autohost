@@ -15,6 +15,11 @@ function lobbyCreationCommandHandler(isPrivate, sessionmanager, user) {
         const session = sessionmanager.getSession(id);
         sessionmanager.ribbon.sendDM(user, `Your ${isPrivate ? "private" : "public"} lobby has been created! \n\nI've tried to invite you, but in case that doesn't work, the room code is ${session.roomID} - join from the Multiplayer menu.`);
         session.ribbon.socialInvite(user);
+        setTimeout(() => {
+            if (!session.someoneDidJoin) {
+                session.destroy("Your lobby timed out because you didn't join in time. Create another one to continue.");
+            }
+        }, 25000);
     });
 }
 

@@ -1,6 +1,6 @@
 // noinspection DuplicatedCode
 
-const FIELDS = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime"];
+const FIELDS = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime", "persistKey"];
 
 function serialise(autohost) {
     const data = {};

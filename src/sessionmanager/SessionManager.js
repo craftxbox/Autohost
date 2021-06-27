@@ -2,7 +2,7 @@ const Ribbon = require("../ribbon/Ribbon");
 const Autohost = require("../autohost/Autohost");
 const crypto = require("crypto");
 const chalk = require("chalk");
-const {getUser} = require("../gameapi/api");
+const {getUser, friendUser, unfriendUser} = require("../gameapi/api");
 const {setLobby, deleteLobby, getLobby, getAllLobbies} = require("../redis/redis");
 const {serialise, deserialise} = require("../redis/serialiser");
 
@@ -75,8 +75,12 @@ class SessionManager {
 
         this.ribbon.on("social.notification", notif => {
             if (notif.type === "friend") {
-                setTimeout(() => {
-                    sendAutohostWelcome(this.ribbon, notif.data.relationship.from._id);
+                const user = notif.data.relationship.from._id;
+                friendUser(user).then(() => { // in order to send dms, there needs to be an open dm session or a friendship from our side
+                    sendAutohostWelcome(this.ribbon, user);
+                    setTimeout(() => {
+                        unfriendUser(user);
+                    }, 10000);
                 });
             }
         });
@@ -127,67 +131,73 @@ class SessionManager {
     }
 
     restoreLobby(id) {
-        if (this.sessions.has(id)) {
-            this.log("Tried to restore a lobby that's still up.");
-            return;
-        }
+        return new Promise(resolve => {
+            if (this.sessions.has(id)) {
+                this.log("Tried to restore a lobby that's still up.");
+                return;
+            }
 
-        getLobby(id).then(lobby => {
-            const ribbon = new Ribbon(process.env.TOKEN);
 
-            this.log(`Restoring lobby ID ${id}`);
+            getLobby(id).then(lobby => {
+                const ribbon = new Ribbon(process.env.TOKEN);
 
-            let joinAttempts = 0;
+                this.log(`Restoring lobby ID ${id}`);
 
-            ribbon.once("joinroom", () => {
-                ribbon.room.takeOwnership();
+                let joinAttempts = 0;
 
-                ribbon.sendChatMessage("Autohost was kicked, rebooted, or otherwise disconnected from TETR.IO. Your room settings have been restored!");
+                ribbon.once("joinroom", () => {
+                    ribbon.room.takeOwnership();
 
-                const autohost = new Autohost(ribbon, lobby.host, lobby.isPrivate);
+                    ribbon.sendChatMessage("Autohost was kicked, rebooted, or otherwise disconnected from TETR.IO. Your room settings have been restored!");
 
-                deserialise(lobby, autohost);
-                this.applyRoomEvents(autohost, id);
-                this.sessions.set(id, autohost);
-            });
+                    const autohost = new Autohost(ribbon, lobby.host, lobby.isPrivate);
 
-            ribbon.on("err", error => {
-                if (error === "no such room") {
-                    ribbon.disconnectGracefully();
-                    this.deleteSession(id);
-                    deleteLobby(id).then(() => {
-                        this.log(`Room restoration failed because the room no longer exists. Session ${id} was removed from Redis.`);
-                    });
-                } else if (error === "you are already in this room") {
-                    joinAttempts++;
-                    if (joinAttempts > 4) {
+                    deserialise(lobby, autohost);
+                    this.applyRoomEvents(autohost, id);
+                    this.sessions.set(id, autohost);
+                    resolve();
+                });
+
+                ribbon.on("err", error => {
+                    if (error === "no such room") {
+                        ribbon.disconnectGracefully();
                         this.deleteSession(id);
                         deleteLobby(id).then(() => {
-                            this.log(`We're apparently still in the room even after waiting. Killing session ${id}.`);
+                            this.log(`Room restoration failed because the room no longer exists. Session ${id} was removed from Redis.`);
+                            resolve();
                         });
-                    } else {
-                        this.log(`Attempt ${joinAttempts} at restoring ${id} failed (server hasn't caught on yet)`);
-                        setTimeout(() => {
-                            ribbon.joinRoom(lobby.roomID);
-                        }, 5000);
+                    } else if (error === "you are already in this room") {
+                        joinAttempts++;
+                        if (joinAttempts > 4) {
+                            this.deleteSession(id);
+                            deleteLobby(id).then(() => {
+                                this.log(`We're apparently still in the room even after waiting. Killing session ${id}.`);
+                                resolve();
+                            });
+                        } else {
+                            this.log(`Attempt ${joinAttempts} at restoring ${id} failed (server hasn't caught on yet)`);
+                            setTimeout(() => {
+                                ribbon.joinRoom(lobby.roomID);
+                            }, 5000);
+                        }
                     }
-                }
-            });
+                });
 
-            ribbon.once("ready", () => {
-                ribbon.joinRoom(lobby.roomID);
+                ribbon.once("ready", () => {
+                    ribbon.joinRoom(lobby.roomID);
+                });
             });
         });
     }
 
-    restoreAllLobbies() {
+    async restoreAllLobbies() {
         this.log("Full restore starting!");
 
-        getAllLobbies().then(lobbies => {
-            lobbies.forEach(lobby => {
-                this.restoreLobby(lobby);
-            });
-        });
+        const lobbies = await getAllLobbies();
+
+        for (const lobby of lobbies) {
+            await this.restoreLobby(lobby);
+        }
     }
 
     createLobby(host, isPrivate) {
@@ -219,6 +229,12 @@ class SessionManager {
 
     getSession(id) {
         return this.sessions.get(id);
+    }
+
+    getSessionByPersistKey(key) {
+        return [...this.sessions.values()].find(session => {
+            return session.persistKey === key;
+        });
     }
 
     deleteSession(id) {

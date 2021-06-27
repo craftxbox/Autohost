@@ -21,8 +21,6 @@ function persistLobby_S(ah) {
     ah.rules.max_apm = 45;
 
     ah.autostart = 10;
-
-    ah.emit("configchange");
 }
 
 function persistLobby_SS(ah) {
@@ -48,8 +46,6 @@ function persistLobby_SS(ah) {
     ah.rules.max_apm = 60;
 
     ah.autostart = 10;
-
-    ah.emit("configchange");
 }
 
 function persistLobby_Bplus(ah) {
@@ -75,8 +71,6 @@ function persistLobby_Bplus(ah) {
     ah.rules.max_apm = 30;
 
     ah.autostart = 10;
-
-    ah.emit("configchange");
 }
 
 module.exports = {persistLobby_S, persistLobby_SS, persistLobby_Bplus};

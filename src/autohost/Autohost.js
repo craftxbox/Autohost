@@ -67,14 +67,14 @@ class Autohost extends EventEmitter {
 
         this.ribbon.room.on("playersupdate", () => {
             if (this.ribbon.room.memberCount === 1 && !this.persist && this.someoneDidJoin) {
-                this.emit("end");
+                this.destroy("Your room was closed because everyone left.");
             } else {
                 this.checkAutostart();
             }
         });
 
         this.ribbon.on("gmupdate", () => {
-            this.emit("configchange");
+            this.saveConfig();
         });
 
         this.ribbon.on("gmupdate.leave", leave => {
@@ -299,7 +299,7 @@ class Autohost extends EventEmitter {
                     if (message && !this.welcomedUsers.has(join._id)) {
                         this.ribbon.sendChatMessage(message);
                         this.welcomedUsers.add(join._id);
-                        this.emit("updateconfig");
+                        this.saveConfig();
                     }
                 });
             });
@@ -317,8 +317,7 @@ class Autohost extends EventEmitter {
                     this.ribbon.room.kickPlayer(player._id);
                 });
 
-                this.emit("stop");
-                clearInterval(this.timeoutInterval);
+                this.destroy("Your Autohost room timed out. Feel free to open a new one.");
             }
         }, 10000);
     }
@@ -334,7 +333,7 @@ class Autohost extends EventEmitter {
         // O = 1v1 mode?
         // P = persist?
         const flagsString = (this.ribbon?.room?.settings?.owner !== botUserID ? "H" : "h") + (this.ribbon.room.ingame ? "G" : "g") + (this.twoPlayerOpponent ? "O" : "o") + (this.persist ? "P" : "p");
-        console.log(`${chalk.redBright(new Date().toLocaleString())} ${chalk.greenBright(this.ribbon?.socket_id)} ${chalk.yellowBright(this.roomID)} ${chalk.blueBright(this.host)} ${chalk.magentaBright(rulesString)} ${chalk.whiteBright(flagsString)}\n${chalk.whiteBright("> " + message.replace(/\n/g, "<line break>"))}`);
+        console.log(chalk.whiteBright(`[Autohost] [${new Date().toLocaleString()} ${this.roomID} ${this.host} ${rulesString} ${flagsString}] ${message.replace(/\n/g, "<line break>")}`));
     }
 
     async checkPlayerEligibility(player) {player
@@ -494,7 +493,7 @@ class Autohost extends EventEmitter {
             clearTimeout(this.autostartTimer);
             this.autostartTimer = undefined;
         }
-        this.emit("configchange");
+        this.saveConfig();
     }
 
     allowPlayer(user, username) {
@@ -527,6 +526,18 @@ class Autohost extends EventEmitter {
         }
 
         this.ribbon.room.start();
+    }
+
+    destroy(message) {
+        this.closing = true;
+        this.ribbon.disconnectGracefully();
+        clearTimeout(this.autostartTimer);
+        clearInterval(this.timeoutInterval);
+        this.emit("stop", message);
+    }
+
+    saveConfig() {
+        this.emit("configchange");
     }
 }
 

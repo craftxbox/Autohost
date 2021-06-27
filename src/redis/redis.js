@@ -36,11 +36,11 @@ function deleteLobby(id) {
 
 function getAllLobbies() {
     return new Promise((resolve, reject) => {
-        client.hgetall("lobbysettings", (err, res) => {
+        client.hkeys("lobbysettings", (err, res) => {
             if (err) return reject(err);
 
             if (res) {
-                resolve(new Map(Object.entries(res).map(entry => [entry[0], JSON.parse(entry[1])])));
+                resolve(res);
             } else {
                 resolve(new Map());
             }

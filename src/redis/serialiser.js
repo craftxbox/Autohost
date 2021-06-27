@@ -1,47 +1,32 @@
 // noinspection DuplicatedCode
 
+const FIELDS = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime"];
+
 function serialise(autohost) {
     const data = {};
 
-    data.host = autohost.host;
-    data.bannedUsers = [...autohost.bannedUsers];
-    data.moderatorUsers = [...autohost.moderatorUsers];
-    data.allowedUsers = [...autohost.allowedUsers];
-    data.twoPlayerMode = autohost.twoPlayerMode;
-    data.twoPlayerChallenger = autohost.twoPlayerChallenger;
-    data.twoPlayerOpponent = autohost.twoPlayerOpponent;
-    data.twoPlayerQueue = autohost.twoPlayerQueue;
-    data.rules = autohost.rules;
-    data.roomID = autohost.roomID;
-    data.isPrivate = autohost.isPrivate;
-    data.persist = autohost.persist;
-    data.autostart = autohost.autostart;
-    data.motdID = autohost.motdID;
-    data.someoneDidJoin = autohost.someoneDidJoin;
-    data.welcomedUsers = [...autohost.welcomedUsers];
-    data.creationTime = autohost.creationTime;
+    FIELDS.forEach(field => {
+        if (autohost[field] instanceof Map || autohost[field] instanceof Set) {
+            data[field] = [...autohost[field]];
+        } else {
+            data[field] = autohost[field];
+        }
+    });
+
 
     return data;
 }
 
 function deserialise(data, target) {
-    target.host = data.host;
-    target.bannedUsers = new Map(data.bannedUsers);
-    target.moderatorUsers = new Map(data.moderatorUsers);
-    target.allowedUsers = new Map(data.allowedUsers);
-    target.twoPlayerMode = data.twoPlayerMode;
-    target.rules = data.rules;
-    target.roomID = data.roomID;
-    target.isPrivate = data.isPrivate;
-    target.persist = data.persist;
-    target.autostart = data.autostart;
-    target.twoPlayerChallenger = data.twoPlayerChallenger;
-    target.twoPlayerOpponent = data.twoPlayerOpponent;
-    target.twoPlayerQueue = data.twoPlayerQueue;
-    target.motdID = data.motdID;
-    target.someoneDidJoin = data.someoneDidJoin;
-    target.welcomedUsers = new Set(data.welcomedUsers);
-    target.creationTime = data.creationTime;
+    FIELDS.forEach(field => {
+        if (target[field] instanceof Map) {
+            target[field] = new Map(data[field]);
+        } else if (target[field] instanceof Set) {
+            target[field] = new Set(data[field]);
+        } else {
+            target[field] = data[field];
+        }
+    })
 }
 
 module.exports = {serialise, deserialise};

@@ -218,7 +218,7 @@ const commands = {
                 autohost.sendMessage(username, "Why would you want to ban yourself?");
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     start: {
@@ -295,7 +295,7 @@ const commands = {
             autohost.sendMessage(username, `Rule updated:\n\n${rule.description(newvalue)}`);
             autohost.recheckPlayers();
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     unset: {
@@ -319,7 +319,7 @@ const commands = {
 
             autohost.sendMessage(username, `Rule unset:\n\n${rule.description(rule.default)}`);
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     hostmode: {
@@ -374,7 +374,7 @@ const commands = {
             autohost.host = newHost;
             autohost.sendMessage(username, `${args[0].toUpperCase()} is now the lobby host.`);
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     autostart: {
@@ -400,7 +400,7 @@ const commands = {
             }
             autohost.checkAutostart();
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     cancelstart: {
@@ -413,7 +413,7 @@ const commands = {
             autohost.checkAutostart();
             autohost.sendMessage(username, `Autostart cancelled.`);
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     shutdown: {
@@ -423,7 +423,7 @@ const commands = {
         needhost: false,
         handler: function (user, username, args, autohost) {
             autohost.ribbon.room.transferOwnership(user);
-            autohost.destroy();
+            autohost.destroy("I've left your lobby at your request.");
         }
     },
     persist: {
@@ -440,7 +440,7 @@ const commands = {
                 autohost.sendMessage(username, "Lobby will persist even if all players leave.");
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     unban: {
@@ -460,7 +460,7 @@ const commands = {
                 autohost.sendMessage(username, `That player is not banned, check the spelling and try again.`);
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     mod: {
@@ -475,11 +475,6 @@ const commands = {
             }
 
             const modRecipient = await autohost.getUserID(args[0]);
-
-            if (autohost.ribbon.room.players.indexOf(modRecipient) === -1 && autohost.ribbon.room.spectators.indexOf(modRecipient) === -1) {
-                autohost.sendMessage(username, "That player is not in this lobby.");
-                return;
-            }
 
             if (modRecipient === global.botUserID) {
                 autohost.sendMessage(username, "No need to mod me!");
@@ -505,7 +500,7 @@ const commands = {
                 autohost.sendMessage(username, `${args[0].toUpperCase()} You're the room host already. Why would you need to mod yourself?`);
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     unmod: {
@@ -525,7 +520,7 @@ const commands = {
                 autohost.sendMessage(username, `That player is not a moderator, check the spelling and try again.`);
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     host: {
@@ -586,7 +581,7 @@ const commands = {
                 autohost.sendMessage(username, "That player is not in this lobby.");
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     queue: {
@@ -628,7 +623,7 @@ const commands = {
                 autohost.sendMessage(username, `You're #${queuePos + 1} in the queue.`);
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     queueoff: {
@@ -743,7 +738,7 @@ const commands = {
 
             autohost.sendMessage(username, `${args[0].toUpperCase()} can now play in this lobby, regardless of any restrictions.`);
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     unallow: {
@@ -763,7 +758,7 @@ const commands = {
                 autohost.sendMessage(username, `That player is not on the allowed player list, check the spelling and try again.`);
             }
 
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     queuelist: {
@@ -845,7 +840,7 @@ const commands = {
                     autohost.ribbon.room.kickPlayer(player._id);
                 });
 
-                autohost.destroy();
+                autohost.destroy("Your lobby was disbanded by Autohost's developer. ");
             }, 10000);
         }
     },
@@ -857,7 +852,7 @@ const commands = {
         handler: function (user, username, args, autohost) {
             autohost.motdID = "disabled";
             autohost.sendMessage(username, "Join messages have been turned off.");
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     },
     joinon: {
@@ -868,7 +863,7 @@ const commands = {
         handler: function (user, username, args, autohost) {
             autohost.motdID = "defaultMOTD";
             autohost.sendMessage(username, "Join messages have been turned on.");
-            autohost.emit("configchange");
+            autohost.saveConfig();
         }
     }
 };

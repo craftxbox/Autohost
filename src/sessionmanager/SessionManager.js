@@ -139,8 +139,11 @@ class SessionManager {
             }
 
 
-            getLobby(id).then(lobby => {
-                const ribbon = new Ribbon(process.env.TOKEN);
+            api.getRibbonVersion().then(version => {
+                global.ribbonVersion = version;
+                return getLobby(id);
+            }).then(lobby => {
+                const ribbon = new Ribbon(process.env.TOKEN, global.ribbonVersion);
 
                 this.log(`Restoring lobby ID ${id}`);
 

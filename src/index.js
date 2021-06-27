@@ -1,10 +1,16 @@
 const path = require("path");
 const SessionManager = require("./sessionmanager/SessionManager");
 const api = require("./gameapi/api");
-const persistlobbies = require("./autohost/persistlobbies");
+const persistlobbies = require("./sessionmanager/persistlobbies");
 const chalk = require("chalk");
 
+const pkg = require("../package.json");
+
 require("dotenv").config({path: path.join(__dirname, "../.env")});
+
+console.log(`${"-".repeat(40)}
+${chalk.greenBright("Auto") + chalk.blueBright("host")} version ${chalk.yellowBright(pkg.version)}
+${"-".repeat(40)}`);
 
 function log(message) {
     console.log(chalk.redBright(`[Main] [${new Date().toLocaleString()}] ${message}`));

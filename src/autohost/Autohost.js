@@ -4,13 +4,16 @@ const api = require("../gameapi/api");
 const commands = require("./commands");
 const APMCalculator = require("./APMCalculator");
 const {getForcedPlayCount, incrementForcedPlayCount} = require("../redis/redis");
-const {TWO_PLAYER_MODES} = require("../data/enums");
+const {TWO_PLAYER_MODES, APM_LIMIT_EXEMPTIONS} = require("../data/enums");
 const {isDeveloper} = require("../data/developers");
 const {checkAllLegacy, checkAll} = require("./rules");
 const ordinal = require("ordinal");
 const motds = require("./motds");
 const chalk = require("chalk");
 
+/**
+ * Autohost! Attaches to a {@link Ribbon} and manages everything in the associated lobby.
+ */
 class Autohost extends EventEmitter {
 
     constructor(ribbon, host, isPrivate) {
@@ -22,6 +25,7 @@ class Autohost extends EventEmitter {
 
         this.creationTime = Date.now();
         this.timeoutWarned = false;
+        this.apmLimitExemption = APM_LIMIT_EXEMPTIONS.NONE;
 
         this.persist = false;
         this.isPrivate = isPrivate;
@@ -210,8 +214,14 @@ class Autohost extends EventEmitter {
             this.ribbon.room.takeOwnership();
 
             this.apmCalculator.clearListenIDs();
-            data.contexts.forEach(player => {
-                this.apmCalculator.addListenID(player.listenID, player.user.username);
+            for (const player of data.contexts) {
+                const playerData = await this.getPlayerData(player.user._id);
+
+                if (this.apmLimitExemption === APM_LIMIT_EXEMPTIONS.RANKED && playerData.league.rank !== "z") {
+                    this.log("Exempting " + player.user.username + " from APM limiter.");
+                } else {
+                    this.apmCalculator.addListenID(player.listenID, player.user.username);
+                }
 
                 this.checkPlayerEligibility(player.user._id).then(ineligible => {
                     if (ineligible) {
@@ -221,7 +231,7 @@ class Autohost extends EventEmitter {
                         this.log(player.user._id + " verified for play.");
                     }
                 });
-            });
+            }
         });
 
         this.ribbon.on("startmulti", () => {
@@ -336,7 +346,7 @@ class Autohost extends EventEmitter {
         console.log(chalk.whiteBright(`[Autohost] [${new Date().toLocaleString()} ${this.roomID} ${this.host} ${rulesString} ${flagsString}] ${message.replace(/\n/g, "<line break>")}`));
     }
 
-    async checkPlayerEligibility(player) {player
+    async checkPlayerEligibility(player) {
         if (this.twoPlayerOpponent) {
             const elMessage = this.check2pEligibility(player);
             if (elMessage) return elMessage;

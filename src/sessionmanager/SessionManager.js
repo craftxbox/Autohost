@@ -2,7 +2,7 @@ const Ribbon = require("../ribbon/Ribbon");
 const Autohost = require("../autohost/Autohost");
 const crypto = require("crypto");
 const chalk = require("chalk");
-const {getUser, friendUser, unfriendUser} = require("../gameapi/api");
+const api = require("../gameapi/api");
 const {setLobby, deleteLobby, getLobby, getAllLobbies} = require("../redis/redis");
 const {serialise, deserialise} = require("../redis/serialiser");
 
@@ -52,7 +52,7 @@ class SessionManager {
             this.ribbon.disconnectGracefully();
         }
 
-        this.ribbon = new Ribbon(process.env.TOKEN);
+        this.ribbon = new Ribbon(process.env.TOKEN, global.ribbonVersion);
 
         this.ribbon.on("dead", () => {
             this.log("Ribbon died, connecting again...");
@@ -76,10 +76,10 @@ class SessionManager {
         this.ribbon.on("social.notification", notif => {
             if (notif.type === "friend") {
                 const user = notif.data.relationship.from._id;
-                friendUser(user).then(() => { // in order to send dms, there needs to be an open dm session or a friendship from our side
+                api.friendUser(user).then(() => { // in order to send dms, there needs to be an open dm session or a friendship from our side
                     sendAutohostWelcome(this.ribbon, user);
                     setTimeout(() => {
-                        unfriendUser(user);
+                        api.unfriendUser(user);
                     }, 10000);
                 });
             }
@@ -201,28 +201,34 @@ class SessionManager {
     }
 
     createLobby(host, isPrivate) {
-        return new Promise(resolve => {
-            const ribbon = new Ribbon(process.env.TOKEN);
+        return new Promise((resolve, reject) => {
+            api.getRibbonVersion().then(version => {
+                global.ribbonVersion = version;
 
-            this.log(`Creating new lobby (host = ${host}, private = ${isPrivate}}`);
+                const ribbon = new Ribbon(process.env.TOKEN, version);
 
-            ribbon.once("joinroom", () => {
-                const autohost = new Autohost(ribbon, host, isPrivate);
+                this.log(`Creating new lobby (host = ${host}, private = ${isPrivate}}`);
 
-                getUser(host).then(user => {
-                    const id = Date.now() + "-" + crypto.randomBytes(8).toString("hex");
+                ribbon.once("joinroom", () => {
+                    const autohost = new Autohost(ribbon, host, isPrivate);
 
-                    ribbon.room.setName(user.username.toUpperCase() + "'S AUTOHOST ROOM");
+                    api.getUser(host).then(user => {
+                        const id = Date.now() + "-" + crypto.randomBytes(8).toString("hex");
 
-                    this.applyRoomEvents(autohost, id);
+                        ribbon.room.setName(user.username.toUpperCase() + "'S AUTOHOST ROOM");
 
-                    this.sessions.set(id, autohost);
-                    resolve(id);
+                        this.applyRoomEvents(autohost, id);
+
+                        this.sessions.set(id, autohost);
+                        resolve(id);
+                    });
                 });
-            });
 
-            ribbon.once("ready", () => {
-                ribbon.createRoom(isPrivate);
+                ribbon.once("ready", () => {
+                    ribbon.createRoom(isPrivate);
+                });
+            }).catch(err => {
+                reject(err);
             });
         });
     }

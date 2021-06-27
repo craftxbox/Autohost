@@ -59,6 +59,17 @@ async function getMe() {
     }
 }
 
+async function getRibbonVersion() {
+    const result = await getAuthed("server/environment");
+
+    if (result.success) {
+        log(`Retrieved Ribbon version ${result.signature.commit.id}`);
+        return result.signature.commit;
+    } else {
+        return undefined;
+    }
+}
+
 async function getRibbonEndpoint() {
     const result = await getAuthed("server/ribbon");
 
@@ -80,4 +91,4 @@ async function unfriendUser(user) {
     return await postAuthed("relationships/remove", {user});
 }
 
-module.exports = {getUser, getMe, getRibbonEndpoint, friendUser, unfriendUser};
+module.exports = {getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser};

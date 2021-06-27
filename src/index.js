@@ -23,7 +23,11 @@ if (!process.env.TOKEN) {
 
 let sm;
 
-api.getMe().then(user => {
+api.getRibbonVersion().then(version => {
+    global.ribbonVersion = version;
+
+    return api.getMe();
+}).then(user => {
     if (!user) {
         log("Your bot token is invalid. You may need to grab a new one if you logged out everywhere.");
         process.exit(1);

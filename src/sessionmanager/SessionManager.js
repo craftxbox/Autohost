@@ -3,7 +3,7 @@ const Autohost = require("../autohost/Autohost");
 const crypto = require("crypto");
 const chalk = require("chalk");
 const api = require("../gameapi/api");
-const {pushMessage} = require("../pushover/pushover");
+const {getBan} = require("../data/globalbans");
 const {setLobby, deleteLobby, getLobby, getAllLobbies} = require("../redis/redis");
 const {serialise, deserialise} = require("../redis/serialiser");
 
@@ -12,6 +12,11 @@ function sendAutohostWelcome(ribbon, user) {
 }
 
 function lobbyCreationCommandHandler(isPrivate, sessionmanager, user) {
+    const ban = getBan(user, ["host", "join"]);
+    if (ban) {
+        sessionmanager.ribbon.sendDM(user, `You have been banned from hosting Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`);
+        return;
+    }
     sessionmanager.createLobby(user, isPrivate).then(id => {
         const session = sessionmanager.getSession(id);
         sessionmanager.ribbon.sendDM(user, `Your ${isPrivate ? "private" : "public"} lobby has been created! \n\nI've tried to invite you, but in case that doesn't work, the room code is ${session.roomID} - join from the Multiplayer menu.`);
@@ -53,7 +58,7 @@ class SessionManager {
             this.ribbon.disconnectGracefully();
         }
 
-        this.ribbon = new Ribbon(process.env.TOKEN, global.ribbonVersion);
+        this.ribbon = new Ribbon(process.env.TOKEN);
 
         this.ribbon.on("dead", () => {
             this.log("Ribbon died, connecting again...");
@@ -138,12 +143,8 @@ class SessionManager {
                 return;
             }
 
-
-            api.getRibbonVersion().then(version => {
-                global.ribbonVersion = version;
-                return getLobby(id);
-            }).then(lobby => {
-                const ribbon = new Ribbon(process.env.TOKEN, global.ribbonVersion);
+            getLobby(id).then(lobby => {
+                const ribbon = new Ribbon(process.env.TOKEN);
 
                 this.log(`Restoring lobby ID ${id}`);
 
@@ -184,6 +185,14 @@ class SessionManager {
                                 ribbon.joinRoom(lobby.roomID);
                             }, 5000);
                         }
+                    } else if (error === "bots may not join this room" || error === "bots may not join rooms that block anons") {
+                        ribbon.disconnectGracefully();
+                        this.deleteSession(id);
+                        deleteLobby(id).then(() => {
+                            this.log(`Cannot (re)join lobby for session ${id} because it blocks anons. Session deleted.`);
+                            this.ribbon.sendDM(lobby.host, "Autohost could not join your lobby because anons (and therefore bots) are blocked.");
+                            resolve();
+                        });
                     }
                 });
 
@@ -205,38 +214,28 @@ class SessionManager {
     }
 
     createLobby(host, isPrivate) {
-        return new Promise((resolve, reject) => {
-            api.getRibbonVersion().then(version => {
-                if (global.ribbonVersion !== version) {
-                    pushMessage(`Ribbon version changed mid session. Check for breaking changes. ${global.ribbonVersion.id} -> ${version.id}`);
-                }
+        return new Promise(resolve => {
+            const ribbon = new Ribbon(process.env.TOKEN);
 
-                global.ribbonVersion = version;
+            this.log(`Creating new lobby (host = ${host}, private = ${isPrivate}}`);
 
-                const ribbon = new Ribbon(process.env.TOKEN, version);
+            ribbon.once("joinroom", () => {
+                const autohost = new Autohost(ribbon, host, isPrivate);
 
-                this.log(`Creating new lobby (host = ${host}, private = ${isPrivate}}`);
+                api.getUser(host).then(user => {
+                    const id = Date.now() + "-" + crypto.randomBytes(8).toString("hex");
 
-                ribbon.once("joinroom", () => {
-                    const autohost = new Autohost(ribbon, host, isPrivate);
+                    ribbon.room.setName(user.username.toUpperCase() + "'S AUTOHOST ROOM");
 
-                    api.getUser(host).then(user => {
-                        const id = Date.now() + "-" + crypto.randomBytes(8).toString("hex");
+                    this.applyRoomEvents(autohost, id);
 
-                        ribbon.room.setName(user.username.toUpperCase() + "'S AUTOHOST ROOM");
-
-                        this.applyRoomEvents(autohost, id);
-
-                        this.sessions.set(id, autohost);
-                        resolve(id);
-                    });
+                    this.sessions.set(id, autohost);
+                    resolve(id);
                 });
+            });
 
-                ribbon.once("ready", () => {
-                    ribbon.createRoom(isPrivate);
-                });
-            }).catch(err => {
-                reject(err);
+            ribbon.once("ready", () => {
+                ribbon.createRoom(isPrivate);
             });
         });
     }

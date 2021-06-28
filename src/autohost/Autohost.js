@@ -10,6 +10,7 @@ const {checkAllLegacy, checkAll} = require("./rules");
 const ordinal = require("ordinal");
 const motds = require("./motds");
 const chalk = require("chalk");
+const {getBan} = require("../data/globalbans");
 
 /**
  * Autohost! Attaches to a {@link Ribbon} and manages everything in the associated lobby.
@@ -279,7 +280,9 @@ class Autohost extends EventEmitter {
         });
 
         this.ribbon.on("gmupdate.join", join => {
-            if ([...this.bannedUsers.values()].indexOf(join._id) !== -1) {
+            const ban = getBan(join._id, ["join", "join-persist"]);
+
+            if ((ban && (ban.type === "join" || (ban.type === "join-persist" && this.persist))) || [...this.bannedUsers.values()].indexOf(join._id) !== -1) {
                 if (!this.ribbon.room.isHost) {
                     this.ribbon.room.takeOwnership();
                     this.ribbon.room.kickPlayer(join._id);

@@ -72,13 +72,12 @@ function ribbonEncode(message) { // todo: perhaps we should actually follow tetr
 
 class Ribbon extends EventEmitter {
 
-    constructor(token, version) {
+    constructor(token) {
         super();
 
         this.lastEndpoint = RIBBON_ENDPOINT;
 
         this.token = token;
-        this.version = version;
 
         this.dead = false;
         this.open = false;
@@ -93,7 +92,10 @@ class Ribbon extends EventEmitter {
         this.lastSent = 0;
         this.lastReceived = -99;
 
-        api.getRibbonEndpoint().then(endpoint => {
+        api.getRibbonVersion().then(version => {
+            this.version = version;
+            return api.getRibbonEndpoint();
+        }).then(endpoint => {
             this.lastEndpoint = endpoint;
             this.connect(endpoint);
         }).catch(() => {

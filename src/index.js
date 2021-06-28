@@ -1,4 +1,6 @@
 const path = require("path");
+require("dotenv").config({path: path.join(__dirname, "../.env")});
+
 const SessionManager = require("./sessionmanager/SessionManager");
 const api = require("./gameapi/api");
 const persistlobbies = require("./sessionmanager/persistlobbies");
@@ -6,10 +8,9 @@ const chalk = require("chalk");
 
 const pkg = require("../package.json");
 
-require("dotenv").config({path: path.join(__dirname, "../.env")});
-
 console.log(`${"-".repeat(40)}
 ${chalk.greenBright("Auto") + chalk.blueBright("host")} version ${chalk.yellowBright(pkg.version)}
+Developed by Zudo at ${chalk.underline("https://kagar.in/autohost")}
 ${"-".repeat(40)}`);
 
 function log(message) {
@@ -23,11 +24,7 @@ if (!process.env.TOKEN) {
 
 let sm;
 
-api.getRibbonVersion().then(version => {
-    global.ribbonVersion = version;
-
-    return api.getMe();
-}).then(user => {
+api.getMe().then(user => {
     if (!user) {
         log("Your bot token is invalid. You may need to grab a new one if you logged out everywhere.");
         process.exit(1);
@@ -66,5 +63,5 @@ api.getRibbonVersion().then(version => {
 });
 
 process.on("SIGINT", () => {
-   sm.shutdown();
+    sm.shutdown();
 });

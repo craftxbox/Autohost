@@ -7,6 +7,7 @@ const persistlobbies = require("./sessionmanager/persistlobbies");
 const chalk = require("chalk");
 
 const pkg = require("../package.json");
+const APIServer = require("./api/APIServer");
 
 console.log(`${"-".repeat(40)}
 ${chalk.greenBright("Auto") + chalk.blueBright("host")} version ${chalk.yellowBright(pkg.version)}
@@ -23,6 +24,7 @@ if (!process.env.TOKEN) {
 }
 
 let sm;
+let server;
 
 api.getMe().then(user => {
     if (!user) {
@@ -38,6 +40,7 @@ api.getMe().then(user => {
     }
 
     sm = new SessionManager();
+    server = new APIServer(process.env.API_PORT || 8180, sm);
 
     sm.restoreAllLobbies().then(() => {
         if (process.env.PERSIST_ROOMS_DISABLED) return;

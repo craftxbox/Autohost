@@ -3,7 +3,9 @@ const Autohost = require("../autohost/Autohost");
 const crypto = require("crypto");
 const chalk = require("chalk");
 const api = require("../gameapi/api");
+const TournamentAutohost = require("../tournaments/TournamentAutohost");
 const {getBan} = require("../data/globalbans");
+const {SERIALISE_TYPES} = require("../data/enums");
 const {setLobby, deleteLobby, getLobby, getAllLobbies} = require("../redis/redis");
 const {serialise, deserialise} = require("../redis/serialiser");
 
@@ -57,6 +59,8 @@ class SessionManager {
         if (this.ribbon) {
             this.ribbon.disconnectGracefully();
         }
+
+        this.startTime = Date.now();
 
         this.ribbon = new Ribbon(process.env.TOKEN);
 
@@ -155,11 +159,20 @@ class SessionManager {
 
                     ribbon.sendChatMessage("Autohost was kicked, rebooted, or otherwise disconnected from TETR.IO. Your room settings have been restored!");
 
-                    const autohost = new Autohost(ribbon, lobby.host, lobby.isPrivate);
+                    let session;
 
-                    deserialise(lobby, autohost);
-                    this.applyRoomEvents(autohost, id);
-                    this.sessions.set(id, autohost);
+                    if (lobby.type === SERIALISE_TYPES.AUTOHOST) {
+                        session = new Autohost(ribbon, lobby.data.host, lobby.data.isPrivate);
+                    } else if (lobby.type === SERIALISE_TYPES.TOURNAMENT) {
+                        session = new TournamentAutohost({
+                            ribbon,
+                            restoring: true
+                        });
+                    }
+
+                    deserialise(lobby, session);
+                    this.applyRoomEvents(session, id);
+                    this.sessions.set(id, session);
                     resolve();
                 });
 
@@ -182,7 +195,7 @@ class SessionManager {
                         } else {
                             this.log(`Attempt ${joinAttempts} at restoring ${id} failed (server hasn't caught on yet)`);
                             setTimeout(() => {
-                                ribbon.joinRoom(lobby.roomID);
+                                ribbon.joinRoom(lobby.data.roomID);
                             }, 5000);
                         }
                     } else if (error === "bots may not join this room" || error === "bots may not join rooms that block anons") {
@@ -197,16 +210,16 @@ class SessionManager {
                 });
 
                 ribbon.once("ready", () => {
-                    ribbon.joinRoom(lobby.roomID);
+                    ribbon.joinRoom(lobby.data.roomID);
                 });
             });
         });
     }
 
     async restoreAllLobbies() {
-        this.log("Full restore starting!");
-
         const lobbies = await getAllLobbies();
+
+        this.log(`Full restore starting! Restoring ${lobbies.length} lobbies.`);
 
         for (const lobby of lobbies) {
             await this.restoreLobby(lobby);
@@ -240,6 +253,46 @@ class SessionManager {
         });
     }
 
+    createMatchLobby(options) {
+        return new Promise(resolve => {
+            const ribbon = new Ribbon(process.env.TOKEN);
+
+            options.ribbon = ribbon;
+
+            this.log(`Creating new MATCH lobby (tournament = ${options.tournamentID}, match = ${options.matchID})`);
+
+            ribbon.once("joinroom", () => {
+                const autohost = new TournamentAutohost(options);
+
+                const id = Date.now() + "-" + crypto.randomBytes(8).toString("hex");
+
+                this.applyRoomEvents(autohost, id);
+
+                this.sessions.set(id, autohost);
+                resolve(id);
+            });
+
+            ribbon.once("ready", () => {
+                ribbon.createRoom(true);
+            });
+        });
+    }
+
+    getStats() {
+        const sessions = [...this.sessions.values()];
+        return {
+            sessions: {
+                count: sessions.length,
+                count_persist: sessions.filter(s => s.persist).length,
+                count_public: sessions.filter(s => s.ribbon.room.settings.type === "public").length
+            },
+            players: {
+                count: sessions.length > 0 ? sessions.map(s => s.ribbon.room.settings.players.length).reduce((a, b) => a + b) : 0
+            },
+            start_time: this.startTime
+        };
+    }
+
     getSession(id) {
         return this.sessions.get(id);
     }
@@ -247,6 +300,12 @@ class SessionManager {
     getSessionByPersistKey(key) {
         return [...this.sessions.values()].find(session => {
             return session.persistKey === key;
+        });
+    }
+
+    getSessionByTournamentMatch(tournament, match) {
+        return [...this.sessions.values()].find(session => {
+            return session.tournamentID === tournament && session.matchID === match;
         });
     }
 

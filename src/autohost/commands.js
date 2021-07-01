@@ -600,7 +600,7 @@ const commands = {
 
             const rulesMessage = checkAllLegacy(autohost.rules, await getUser(user), autohost);
 
-            if (rulesMessage) {
+            if (rulesMessage && !autohost.allowedUsers.has(user)) {
                 autohost.sendMessage(username, rulesMessage + ".");
                 return;
             }

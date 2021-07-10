@@ -600,7 +600,7 @@ const commands = {
 
             const rulesMessage = checkAllLegacy(autohost.rules, await getUser(user), autohost);
 
-            if (rulesMessage && [...this.allowedUsers.values()].indexOf(player) === -1) {
+            if (rulesMessage && [...autohost.allowedUsers.values()].indexOf(player) === -1) {
                 autohost.sendMessage(username, rulesMessage + ".");
                 return;
             }

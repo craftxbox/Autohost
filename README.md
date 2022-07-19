@@ -9,7 +9,7 @@ Also, don't make a request for a bot account without properly thinking it throug
 
 # Autohost for TETR.IO
 
-A bot for osk's TETR.IO that allows for the following additional features in custom games:
+A bot for osk's [TETR.IO](https://tetr.io) that allows for the following additional features in custom games:
 
 * Automatic game starts
 * 1v1 queues

@@ -1,6 +1,6 @@
 const redis = require("redis");
 
-const client = redis.createClient();
+const client = redis.createClient({host:"192.168.0.8",password:"whileseventeenthirtysevencanbeprettyfunnythefunnynumberisarguablysixtynine"});
 
 function getLobby(id) {
     return new Promise((resolve, reject) => {

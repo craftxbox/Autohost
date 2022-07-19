@@ -87,7 +87,7 @@ const commands = {
         devonly: false,
         needhost: false,
         handler: function (user, username, args, autohost) {
-            autohost.ribbon.sendChatMessage("For detailed help, including a list of commands, visit the project homepage:\n\nhttps://kagar.in/autohost\n\nAutohost is developed by Zudo (Zudo#0800 on Discord) - feel free to send me any feedback!");
+            autohost.ribbon.sendChatMessage("As of yet, No detailed documentation is available.\n\nAutohost was developed by Zudo (Zudo#0800 on Discord) - please don't bother them.\nIf you have any questions, Contact craftxbox (! craftxbox#4738 on Discord)");
         }
     },
     kick: {
@@ -530,7 +530,7 @@ const commands = {
         needhost: false,
         handler: async function (user, username, args, autohost) {
             if (autohost.host === botUserID) {
-                autohost.sendMessage(username, "This room is persistent and doesn't have a human host. If you have an issue, contact Zudo#0800 on Discord.");
+                autohost.sendMessage(username, "This room is persistent and doesn't have a human host. If you have an issue, contact ! craftxbox#4738 on Discord.");
                 return;
             }
 
@@ -651,7 +651,8 @@ const commands = {
         devonly: false,
         needhost: false,
         handler: function (user, username, args, autohost) {
-            autohost.sendMessage(username, "Go to https://kagar.in/autohost/commands for a list of commands.");
+            autohost.sendMessage(username, "As of yet, there is no detailed documentation of the commands list.");
+            //autohost.sendMessage(username, "Go to https://kagar.in/autohost/commands for a list of commands.");
         }
     },
     set: {

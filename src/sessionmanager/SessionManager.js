@@ -10,7 +10,8 @@ const {setLobby, deleteLobby, getLobby, getAllLobbies} = require("../redis/redis
 const {serialise, deserialise} = require("../redis/serialiser");
 
 function sendAutohostWelcome(ribbon, user) {
-    ribbon.sendDM(user, "Hi there! Autohost is a bot for TETR.IO that allows for additional host features in custom games. \n\nType !public to create a public lobby. \nType !private to create a private lobby. \n\nIf you're new to Autohost, visit https://kagar.in/autohost to learn more.");
+    ribbon.sendDM(user, "Hi there! Autohost is a bot for TETR.IO that allows for additional host features in custom games. \n\nType !public to create a public lobby. \nType !private to create a private lobby. \n\n");
+    // If you're new to Autohost, visit https://kagar.in/autohost to learn more.
 }
 
 function lobbyCreationCommandHandler(isPrivate, sessionmanager, user) {

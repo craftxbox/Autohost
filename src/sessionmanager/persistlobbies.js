@@ -3,8 +3,8 @@ const {APM_LIMIT_EXEMPTIONS} = require("../data/enums");
 function persistLobby_S(ah) {
     ah.persist = true;
 
-    ah.ribbon.room.setName("S AND BELOW ONLY");
-    ah.ribbon.room.setRoomID("AUTOHOSTS");
+    ah.ribbon.room.setName("S AND BELOW ONLY [CRAFTXBOT]");
+    ah.ribbon.room.setRoomID("CRXBHOSTS");
 
     ah.ribbon.room.setRoomConfig([
         {
@@ -17,8 +17,8 @@ function persistLobby_S(ah) {
 
     ah.rules.anons_allowed = false;
 
-    ah.rules.unrated_allowed = true;
-    ah.rules.rankless_allowed = true;
+    ah.rules.unrated_allowed = false;
+    ah.rules.rankless_allowed = false;
     ah.rules.max_rank = "s";
     ah.rules.max_apm = 45;
 
@@ -30,8 +30,8 @@ function persistLobby_S(ah) {
 function persistLobby_SS(ah) {
     ah.persist = true;
 
-    ah.ribbon.room.setName("SS AND BELOW ONLY");
-    ah.ribbon.room.setRoomID("AUTOHOSTSS");
+    ah.ribbon.room.setName("SS AND BELOW ONLY [CRAFTXBOT]");
+    ah.ribbon.room.setRoomID("CRXBHOSTSS");
 
     ah.ribbon.room.setRoomConfig([
         {
@@ -44,8 +44,8 @@ function persistLobby_SS(ah) {
 
     ah.rules.anons_allowed = false;
 
-    ah.rules.unrated_allowed = true;
-    ah.rules.rankless_allowed = true;
+    ah.rules.unrated_allowed = false;
+    ah.rules.rankless_allowed = false;
     ah.rules.max_rank = "ss";
     ah.rules.max_apm = 60;
 
@@ -57,8 +57,8 @@ function persistLobby_SS(ah) {
 function persistLobby_Bplus(ah) {
     ah.persist = true;
 
-    ah.ribbon.room.setName("B+ AND BELOW ONLY");
-    ah.ribbon.room.setRoomID("AUTOHOSTBPLUS");
+    ah.ribbon.room.setName("B+ AND BELOW ONLY [CRAFTXBOT]");
+    ah.ribbon.room.setRoomID("CRXBHOSTBPLUS");
 
     ah.ribbon.room.setRoomConfig([
         {
@@ -71,8 +71,8 @@ function persistLobby_Bplus(ah) {
 
     ah.rules.anons_allowed = false;
 
-    ah.rules.unrated_allowed = true;
-    ah.rules.rankless_allowed = true;
+    ah.rules.unrated_allowed = false;
+    ah.rules.rankless_allowed = false;
     ah.rules.max_rank = "b+";
     ah.rules.max_apm = 30;
 

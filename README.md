@@ -20,21 +20,23 @@ A bot for osk's TETR.IO that allows for the following additional features in cus
 
 This is built on a custom Ribbon implementation in Node.js.
 
-## Need help?
+<!--## Need help?
 
-Check out the [wiki](https://github.com/ZudoB/autohost/wiki) for guides on how to use Autohost.
+Check out the [wiki](https://github.com/ZudoB/autohost/wiki) for guides on how to use Autohost.-->
 
 ## Found a bug?
 
-Please open an [issue](https://github.com/ZudoB/autohost/issues/new) or submit a pull request. Alternatively, send me a
-message on Discord (`Zudo#0800`)
+Please open an [issue](./issues/new) or submit a pull request. Alternatively, send me a
+message on Discord (`! craftxbox#4738`)
 
 ## Want to support the project?
 
-**Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do. However,
-I do have a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to help with hosting costs.
+**Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do. 
+However, the original developer, Zudo has a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to support his original work instead.
 
 ## Acknowledgements
+I would like to thank Zudo for making the idea into a reality. Although he has moved onto new endeavours, the time, money, and love he put into creating, hosting, and maintaining the original Autohost won't be forgotten.
 
-Special thanks goes out to Poyo for [documenting the Ribbon](https://github.com/Poyo-SSB/tetrio-bot-docs), Zyrixia for the in game avatar, craftxbox for
+Zudo's original acknowledgements:
+>Special thanks goes out to Poyo for [documenting the Ribbon](https://github.com/Poyo-SSB/tetrio-bot-docs), Zyrixia for the in game avatar, craftxbox for
 the initial idea, and to the many people who have helped test Autohost.

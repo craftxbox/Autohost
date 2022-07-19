@@ -1,70 +1,56 @@
-const path = require("path");
-require("dotenv").config({path: path.join(__dirname, "../.env")});
-
-const SessionManager = require("./sessionmanager/SessionManager");
-const api = require("./gameapi/api");
-const persistlobbies = require("./sessionmanager/persistlobbies");
-const chalk = require("chalk");
-
-const pkg = require("../package.json");
-const APIServer = require("./api/APIServer");
-
-console.log(`${"-".repeat(40)}
-${chalk.greenBright("Auto") + chalk.blueBright("host")} version ${chalk.yellowBright(pkg.version)}
-Developed by Zudo at ${chalk.underline("https://kagar.in/autohost")}
-${"-".repeat(40)}`);
-
-function log(message) {
-    console.log(chalk.redBright(`[Main] [${new Date().toLocaleString()}] ${message}`));
-}
+const {cpus} = require("os");
+const cluster = require("cluster");
+const {getMe} = require("./gameapi/api");
+const {logMessage, LOG_LEVELS} = require("./log");
 
 if (!process.env.TOKEN) {
-    log("Please specify a TETR.IO bot token in the TOKEN environment variable. See https://kagar.in/bots for information.");
+    console.error("Please specify a TETR.IO bot token in the TOKEN environment variable.");
     process.exit(1);
 }
 
-let sm;
-let server;
+// janky hack!
+Error.prototype.getStatusCode = function () {
+    return 500;
+}
 
-api.getMe().then(user => {
-    if (!user) {
-        log("Your bot token is invalid. You may need to grab a new one if you logged out everywhere.");
-        process.exit(1);
-    }
+Error.prototype.getUserFacingMessage = function () {
+    console.warn(this.stack);
+    return "Something went wrong, please try again later.";
+}
 
-    global.botUserID = user._id;
+
+getMe().then(user => {
+    console.log(user);
 
     if (user.role !== "bot") {
-        log("You are attempting to run Autohost on a non-bot account. STOP NOW, and read the information at https://kagar.in/bots before trying again.");
-        process.exit(1);
+        console.error("Please specify a TETR.IO bot token in the TOKEN environment variable.");
+        return process.exit(1);
     }
 
-    sm = new SessionManager();
-    server = new APIServer(process.env.API_PORT || 8180, sm);
+    if (cluster.isPrimary) {
+        // spin up workers
 
-    sm.restoreAllLobbies().then(() => {
-        if (process.env.PERSIST_ROOMS_DISABLED) return;
-        Object.keys(persistlobbies).forEach(lobby => {
-            if (sm.getSessionByPersistKey(lobby)) {
-                log(lobby + " was restored, not creating it again.");
-                return;
-            }
+        const workers = [];
 
-            sm.createLobby(user._id, false).then(id => {
-                const session = sm.getSession(id);
+        for (let i = 0; i < Math.min(cpus().length, 8); i++) {
+            const child_proc = cluster.fork();
+            child_proc.process.on("error", e => console.warn("Worker error", e));
+            workers.push(child_proc);
+        }
 
-                session.persistKey = lobby;
+        require("./ipc")(workers);
+        require("./primary");
 
-                persistlobbies[lobby](session);
-
-                log(`Persist lobby ${lobby} was created, code is ${session.roomID}`);
-
-                session.saveConfig();
-            });
-        });
-    });
+        logMessage(LOG_LEVELS.INFO, "Process", "Autohost primary process started at " + new Date().toISOString());
+    } else {
+        require("./ipc")();
+        require("./worker");
+    }
+}).catch(e => {
+    console.error(e);
+    return process.exit(1);
 });
 
-process.on("SIGINT", () => {
-    sm.shutdown();
+process.on("uncaughtException", e => {
+    logMessage(LOG_LEVELS.CRITICAL, "Process", "Uncaught exception! " + e.message);
 });

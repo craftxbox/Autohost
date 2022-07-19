@@ -5,19 +5,20 @@ const commands = require("./commands");
 const APMCalculator = require("./APMCalculator");
 const {getForcedPlayCount, incrementForcedPlayCount} = require("../redis/redis");
 const {TWO_PLAYER_MODES, APM_LIMIT_EXEMPTIONS} = require("../data/enums");
-const {isDeveloper} = require("../data/developers");
-const {checkAllLegacy, checkAll} = require("./rules");
+const {checkAll} = require("./rules");
 const ordinal = require("ordinal");
 const motds = require("./motds");
-const chalk = require("chalk");
-const {getBan} = require("../data/globalbans");
+const {BloomFilter} = require("bloom-filters");
+const {logMessage, LOG_LEVELS} = require("../log");
+const {DBUser} = require("../db/models");
+const {getUser} = require("../gameapi/api");
 
 /**
  * Autohost! Attaches to a {@link Ribbon} and manages everything in the associated lobby.
  */
 class Autohost extends EventEmitter {
 
-    constructor(ribbon, host, isPrivate) {
+    constructor({ribbon, host, persistLobby}) {
         super();
 
         if (!ribbon.room) {
@@ -29,7 +30,6 @@ class Autohost extends EventEmitter {
         this.apmLimitExemption = APM_LIMIT_EXEMPTIONS.NONE;
 
         this.persist = false;
-        this.isPrivate = isPrivate;
         this.host = host;
 
         this.motd = undefined;
@@ -40,15 +40,13 @@ class Autohost extends EventEmitter {
         this.playerData = new Map();
         /** cache for username lookup **/
         this.usernamesToIds = new Map();
-        /** banned users **/
-        this.bannedUsers = new Map();
         /** moderators **/
         this.moderatorUsers = new Map();
         /** users who were !allowed **/
         this.allowedUsers = new Map();
 
         /** users who have already seen the motd **/
-        this.welcomedUsers = new Set();
+        this.welcomedUsers = new BloomFilter(8000, 10);
 
         this.twoPlayerMode = TWO_PLAYER_MODES.STATIC_HOTSEAT;
 
@@ -64,12 +62,31 @@ class Autohost extends EventEmitter {
 
         this.motdID = "defaultMOTD";
 
+        this.persistLobby = persistLobby;
         this.ribbon = ribbon;
 
-        this.ribbon.on("ah-log", message => {
-            this.log("[RIBBON] " + message);
-        });
+        this.smurfProtection = false;
 
+        if (this.host && !this.persistLobby) {
+            getUser(this.host).then(user => {
+                this.ribbon.room.setName(`${user.username.toUpperCase()}'S AUTOHOST ROOM`);
+            });
+        }
+    }
+
+    log(message) {
+        // todo: move
+        logMessage(LOG_LEVELS.FINE, "Autohost", message, {
+            room: this.roomID,
+            rules: this.rules,
+            host_mode: this.ribbon?.room?.settings?.owner !== botUserID,
+            ingame: this.ribbon.room.ingame,
+            in_1v1: this.twoPlayerOpponent,
+            persist: this.persist
+        });
+    }
+
+    async setup() {
         this.ribbon.room.on("playersupdate", () => {
             if (this.ribbon.room.memberCount === 1 && !this.persist && this.someoneDidJoin) {
                 this.destroy("Your room was closed because everyone left.");
@@ -115,8 +132,8 @@ class Autohost extends EventEmitter {
 
         this.ribbon.on("replay", replay => {
             replay.frames.forEach(frame => {
-                if (frame.type === "ige" && frame.data.data.type === "attack") {
-                    this.apmCalculator.addGarbageIGE(frame.data.data.sender, frame.data.data.lines);
+                if (frame.type === "ige" && frame.data?.data?.type === "interaction" && frame.data?.data?.data?.type === "garbage") {
+                    this.apmCalculator.addGarbageIGE(frame.data?.data?.sender, frame.data?.data?.data?.amt);
                 }
             });
         });
@@ -144,7 +161,7 @@ class Autohost extends EventEmitter {
         });
 
         this.ribbon.on("chat", async chat => {
-            if (chat.user.role === "bot") return; // ignore other bots
+            // if (chat.user.role === "bot") return; // ignore other bots
 
             const message = chat.content.trim();
 
@@ -162,7 +179,9 @@ class Autohost extends EventEmitter {
 
             let host = user === this.host;
             const mod = [...this.moderatorUsers.values()].indexOf(user) !== -1;
-            const dev = isDeveloper(user);
+
+            const dbProfile = await DBUser.findOne({tetrio_id: user});
+            const dev = dbProfile && dbProfile.roles.developer;
 
             if (!host && !dev) {
                 host = ["admin", "mod"].indexOf((await this.getPlayerData(user)).role) !== -1;
@@ -180,7 +199,7 @@ class Autohost extends EventEmitter {
                 }
 
                 if (!dev && commandObj.devonly) {
-                    this.sendMessage(username, "This command is only available for developers.");
+                    this.sendMessage(username, "Only Autohost's developer can use this command.");
                     return;
                 }
 
@@ -194,7 +213,7 @@ class Autohost extends EventEmitter {
                     return;
                 }
 
-                commandObj.handler(user, username, args, this);
+                commandObj.handler(user, username, args, this, dev);
             }
         });
 
@@ -261,6 +280,19 @@ class Autohost extends EventEmitter {
 
             this.apmCalculator.stop();
 
+            for (const i in endstate.leaderboard) {
+                if (endstate.leaderboard.hasOwnProperty(i)) {
+                    const player = endstate.leaderboard[i];
+                    if (i < Math.min(3, endstate.leaderboard.length - 1)) {
+                        logMessage(LOG_LEVELS.ULTRAFINE, "Smurf Protection", "Recorded win for " + player.user._id);
+                        smurfProtection.recordWin(player.user._id);
+                    } else {
+                        logMessage(LOG_LEVELS.ULTRAFINE, "Smurf Protection", "Recorded loss for " + player.user._id);
+                        smurfProtection.recordLoss(player.user._id);
+                    }
+                }
+            }
+
             const firstPlace = endstate.currentboard.find(player => player.success);
 
             if (firstPlace && this.twoPlayerMode === TWO_PLAYER_MODES.DYNAMIC_HOTSEAT && firstPlace.user._id !== this.twoPlayerOpponent) {
@@ -279,74 +311,47 @@ class Autohost extends EventEmitter {
             }, 10000);
         });
 
-        this.ribbon.on("gmupdate.join", join => {
-            const ban = getBan(join._id, ["join", "join-persist"]);
-
-            if ((ban && (ban.type === "join" || (ban.type === "join-persist" && this.persist))) || [...this.bannedUsers.values()].indexOf(join._id) !== -1) {
-                if (!this.ribbon.room.isHost) {
-                    this.ribbon.room.takeOwnership();
-                    this.ribbon.room.kickPlayer(join._id);
-                    this.ribbon.room.transferOwnership(this.host);
-                    this.ribbon.sendChatMessage("Took host temporarily to remove a banned player.");
-                } else {
-                    this.ribbon.room.kickPlayer(join._id);
-                }
-                return;
-            }
-
+        this.ribbon.on("gmupdate.join", async join => {
             this.someoneDidJoin = true;
 
-            api.getUser(join._id).then(user => {
-                this.playerData.set(user._id, user);
-                this.usernamesToIds.set(user.username.toLowerCase(), user._id);
+            const user = await api.getUser(join._id);
 
-                const {message, rule} = checkAll(this.rules, user, this);
+            this.playerData.set(user._id, user);
+            this.usernamesToIds.set(user.username.toLowerCase(), user._id);
 
-                if (rule) {
-                    this.ribbon.room.switchPlayerBracket(user._id, "spectator");
+            const {message, rule} = await checkAll(this.rules, user, this);
+
+            if (rule) {
+                this.ribbon.room.switchPlayerBracket(user._id, "spectator");
+            }
+
+            const actualMotdID = motds.hasOwnProperty(this.motdID) ? this.motdID : "defaultMOTD";
+
+            motds[actualMotdID](this, join._id, user.username, rule, message).then(message => {
+                if (message && !this.welcomedUsers.has(join._id)) {
+                    DBUser.findOne({tetrio_id: join._id}).then(user => {
+                        let toSend = message;
+
+                        if (user?.join_emote) {
+                            toSend += ` :${user.join_emote}:`;
+                        }
+
+                        this.ribbon.sendChatMessage(toSend);
+                    });
+                    this.welcomedUsers.add(join._id);
+                    this.saveConfig();
                 }
-
-                const actualMotdID = motds.hasOwnProperty(this.motdID) ? this.motdID : "defaultMOTD";
-
-                motds[actualMotdID](this, join._id, user.username, rule, message).then(message => {
-                    if (message && !this.welcomedUsers.has(join._id)) {
-                        this.ribbon.sendChatMessage(message);
-                        this.welcomedUsers.add(join._id);
-                        this.saveConfig();
-                    }
-                });
             });
         });
 
-        this.timeoutInterval = setInterval(() => {
-            if (this.persist || this.ribbon.room.settings.type === "private") return;
-            if (Date.now() - this.creationTime >= 28200000 && !this.timeoutWarned) { // 7 hours 50 minutes
-                this.ribbon.clearChat();
-                this.ribbon.sendChatMessage("⚠ LOBBY TIMEOUT WARNING ⚠\n\nTo prevent abuse, public Autohost lobbies time out after eight hours. This lobby will time out soon, so please finish up your games. Thank you!");
-                this.timeoutWarned = true;
-            } else if (Date.now() - this.creationTime >= 2.88e+7) { // 8 hours
-                this.ribbon.room.settings.players.forEach(player => {
-                    if (player._id === botUserID) return;
-                    this.ribbon.room.kickPlayer(player._id);
-                });
 
-                this.destroy("Your Autohost room timed out. Feel free to open a new one.");
+        setTimeout(() => {
+            if (!this.someoneDidJoin && !this.persist) {
+                this.destroy("Your lobby timed out because nobody joined in time.");
             }
-        }, 10000);
-    }
+        }, 30000);
 
-    log(message) {
-        const rulesString = Object.keys(this.rules).map(rule => {
-            return rule.split("_").map(part => part[0]).join("").toUpperCase() + "=" + this.rules[rule];
-        }).join(",") || "NoRules";
-
-        // Upper case = true, lower case = false
-        // H = host mode, or other player host?
-        // G = game in progress?
-        // O = 1v1 mode?
-        // P = persist?
-        const flagsString = (this.ribbon?.room?.settings?.owner !== botUserID ? "H" : "h") + (this.ribbon.room.ingame ? "G" : "g") + (this.twoPlayerOpponent ? "O" : "o") + (this.persist ? "P" : "p");
-        console.log(chalk.whiteBright(`[Autohost] [${new Date().toLocaleString()} ${this.roomID} ${this.host} ${rulesString} ${flagsString}] ${message.replace(/\n/g, "<line break>")}`));
+        this.emit("ready");
     }
 
     async checkPlayerEligibility(player) {
@@ -362,7 +367,7 @@ class Autohost extends EventEmitter {
             return;
         }
 
-        return checkAllLegacy(this.rules, playerData, this);
+        return (await checkAll(this.rules, playerData, this)).message;
     }
 
     get roomID() {
@@ -395,18 +400,6 @@ class Autohost extends EventEmitter {
             }
             return data;
         }
-    }
-
-    banPlayer(user, username) {
-        this.bannedUsers.set(username.toLowerCase(), user);
-    }
-
-    unbanPlayer(username) {
-        if (this.bannedUsers.has(username.toLowerCase())) {
-            this.bannedUsers.delete(username.toLowerCase());
-            return true;
-        }
-        return false;
     }
 
     modPlayer(user, username) {
@@ -542,11 +535,10 @@ class Autohost extends EventEmitter {
     }
 
     destroy(message) {
-        this.closing = true;
+        this.emit("stop", message);
         this.ribbon.disconnectGracefully();
         clearTimeout(this.autostartTimer);
         clearInterval(this.timeoutInterval);
-        this.emit("stop", message);
     }
 
     saveConfig() {

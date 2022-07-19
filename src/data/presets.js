@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 const parse = require("../ribbon/configparser");
+=======
+const {parseSet} = require("../ribbon/configparser");
+>>>>>>> refs/rewritten/Merge-ZudoB-Autohost-into-master
 
 const DEFAULTS = "meta.userlimit=0;meta.bgm=RANDOM;meta.match.type=versus;meta.match.ft=1;meta.match.wb=1;game.options.stock=0;game.options.bagtype=7-bag;game.options.spinbonuses=T-spins;game.options.allow180=1;game.options.kickset=SRS+;game.options.allow_harddrop=1;game.options.display_next=1;game.options.display_hold=1;game.options.nextcount=5;game.options.display_shadow=1;game.options.are=0;game.options.lineclear_are=0;game.options.room_handling=0;game.options.room_handling_arr=2;game.options.room_handling_das=10;game.options.room_handling_sdf=6;game.options.g=0.02;game.options.gincrease=0.0025;game.options.gmargin=3600;game.options.garbagemultiplier=1;game.options.garbagemargin=10800;game.options.garbageincrease=0.008;game.options.locktime=30;game.options.garbagespeed=20;game.options.garbagecap=8;game.options.garbagecapincrease=0;game.options.garbagecapmax=40;game.options.manual_allowed=0;game.options.b2bchaining=1;game.options.clutch=1";
 
@@ -11,10 +15,17 @@ const PRESET_STRINGS = {
 
 const presets = {};
 
+<<<<<<< HEAD
 presets.default = parse(DEFAULTS);
 
 Object.keys(PRESET_STRINGS).forEach(preset => {
     let settings = parse(PRESET_STRINGS[preset]);
+=======
+presets.default = parseSet(DEFAULTS);
+
+Object.keys(PRESET_STRINGS).forEach(preset => {
+    let settings = parseSet(PRESET_STRINGS[preset]);
+>>>>>>> refs/rewritten/Merge-ZudoB-Autohost-into-master
 
     const filteredDefaults = presets.default.filter(setting => {
         return !settings.find(s => s.index === setting.index);

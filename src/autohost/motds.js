@@ -1,5 +1,3 @@
-const {isDeveloper} = require("../data/developers");
-
 function disabled() {
     return Promise.resolve();
 }
@@ -10,13 +8,13 @@ async function defaultMOTD(autohost, userID, username, ruleID, ineligibleMessage
     if (userID === autohost.host) {
         message = `Welcome to your room, ${username.toUpperCase()}!
                     
-- Use !setrule to change the rules for this room.
-- Use !preset to enable special rulesets.
+- Use !setrule to change the participation rules for this room.
+- Use !preset to enable special game settings.
 - Use !autostart to allow the room to start automatically.
 - Use !hostmode to become the host, to adjust room settings.
-- Need more? Use !commands for a full list of commands. 
 
 When you're ready to start, type !start.`
+//- Need more? Visit https://autoho.st/about/commands for a full list of commands.
     } else {
         if (ineligibleMessage) {
             message = `Welcome, ${username.toUpperCase()}. ${ineligibleMessage} - however, feel free to spectate.`;
@@ -34,10 +32,6 @@ When you're ready to start, type !start.`
         }
     }
 
-    if (isDeveloper(userID)) {
-        message += " :serikasip:";
-    }
-
     return message;
 }
 
@@ -46,9 +40,11 @@ async function persist(autohost, userID, username, ruleID, ineligibleMessage) {
 
     if (ruleID) {
         if (ruleID === "anons_allowed") {
-            message = `Welcome, ${username.toUpperCase()}. If you wish to play in this lobby, please join again on a registered TETR.IO account - this helps us stop smurfs from ruining the game. Thanks for understanding!`;
+            message = `Welcome, ${username.toUpperCase()}. If you wish to play in this lobby, please join again on a registered TETR.IO account. Thanks for understanding!`;
         } else if (ruleID === "max_rank") {
             message = `Welcome, ${username.toUpperCase()}. Unfortunately, your rank is too high to participate in this room. However, feel free to spectate.`;
+        } else if (ruleID === "min_rank") {
+            message = `Welcome, ${username.toUpperCase()}. Unfortunately, your rank is too low to participate in this room. However, feel free to spectate.`;
         } else {
             message = `Welcome, ${username.toUpperCase()}. ${ineligibleMessage}.`;
         }
@@ -62,10 +58,6 @@ async function persist(autohost, userID, username, ruleID, ineligibleMessage) {
                 message = `Welcome, ${username.toUpperCase()}. The game will start when another player joins.`
             }
         }
-    }
-
-    if (isDeveloper(userID)) {
-        message += " :serikasip:";
     }
 
     return message;

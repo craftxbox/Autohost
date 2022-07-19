@@ -1,5 +1,4 @@
-const {pushMessage} = require("../pushover/pushover");
-const chalk = require("chalk");
+const {logMessage, LOG_LEVELS} = require("../log");
 
 class APMCalculator {
 
@@ -16,7 +15,7 @@ class APMCalculator {
     }
 
     log(message) {
-        console.log(chalk.blueBright(`[APMCalculator] [${new Date().toLocaleString()}] ${message}`));
+        logMessage(LOG_LEVELS.FINE, "APMCalculator", message);
     }
 
     clearListenIDs() {
@@ -84,10 +83,6 @@ class APMCalculator {
 
         if (infractions >= 3 && normalisedAPM > this.max) {
             this.autohost.sendMessage(username, `You have been exceeding this room's APM limit consistently, and as such can no longer play. (${infractions} infractions)`);
-
-            if (this.autohost.persist) {
-                pushMessage(`User ${username} exceeded the APM limit in a persist lobby. Room: ${this.autohost.ribbon.room.id}, APM: ${normalisedAPM}, limit: ${this.max}`);
-            }
         } else if (normalisedAPM > this.max) {
             this.autohost.sendMessage(username, `You exceeded this room's APM limit during this game. Please respect the other players in the room by playing at their level in the next game. (${infractions} infraction${Math.abs(infractions) !== 1 ? "s" : ""})`);
         }

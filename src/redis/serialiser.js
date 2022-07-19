@@ -1,9 +1,11 @@
-const {SERIALISE_TYPES} = require("../data/enums");
+const {BloomFilter} = require("bloom-filters");
 const TournamentAutohost = require("../tournaments/TournamentAutohost");
+const StreamedTournamentAutohost = require("../tournaments/StreamedTournamentAutohost");
 
 const FIELDS = {};
-FIELDS[SERIALISE_TYPES.AUTOHOST] = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime", "persistKey", "apmLimitExemption"];
-FIELDS[SERIALISE_TYPES.TOURNAMENT] = ["player1id", "player2id", "player1challonge", "player2challonge", "tournamentID", "matchID"];
+FIELDS["Autohost"] = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime", "persistLobby", "apmLimitExemption", "smurfProtection"];
+FIELDS["TournamentAutohost"] = ["tournamentID", "matchID", "player1", "player2", "player1ready", "player2ready", "player1disconnections", "player2disconnections", "spectatorsAllowed", "spectatorJoined", "matchStarted", "roomID"];
+FIELDS["StreamedTournamentAutohost"] = ["tournamentID", "roomID"];
 
 /**
  * Takes an Autohost instance and converts it to JSON that's safe for sticking in Redis.
@@ -11,7 +13,9 @@ FIELDS[SERIALISE_TYPES.TOURNAMENT] = ["player1id", "player2id", "player1challong
  * @returns {Object} A JSON object.
  */
 function serialise(autohost) {
-    const type = autohost instanceof TournamentAutohost ? SERIALISE_TYPES.TOURNAMENT : SERIALISE_TYPES.AUTOHOST;
+    const type =
+        autohost instanceof TournamentAutohost ? "TournamentAutohost" :
+            (autohost instanceof StreamedTournamentAutohost ? "StreamedTournamentAutohost" : "Autohost");
 
     const fields = FIELDS[type];
     const data = {};
@@ -19,6 +23,8 @@ function serialise(autohost) {
     fields.forEach(field => {
         if (autohost[field] instanceof Map || autohost[field] instanceof Set) {
             data[field] = [...autohost[field]];
+        } else if (autohost[field] instanceof BloomFilter) {
+            data[field] = autohost[field].saveAsJSON();
         } else {
             data[field] = autohost[field];
         }
@@ -41,6 +47,8 @@ function deserialise(data, target) {
             target[field] = new Map(data.data[field]);
         } else if (target[field] instanceof Set) {
             target[field] = new Set(data.data[field]);
+        } else if (target[field] instanceof BloomFilter) {
+            target[field] = BloomFilter.fromJSON(data.data[field]);
         } else {
             target[field] = data.data[field];
         }

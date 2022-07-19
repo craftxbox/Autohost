@@ -1,48 +1,105 @@
 const fetch = require("node-fetch");
-const chalk = require("chalk");
+const {logMessage, LOG_LEVELS} = require("../log");
+const {getCachedAPIResponse, storeCachedAPIResponse} = require("../redis/redis");
 
 const API_BASE = "https://ch.tetr.io/api/";
 const AUTHED_BASE = "https://tetr.io/api/";
+const UA = "Autohost/" + require("../../package.json").version + " (zudo@kagar.in)";
 
 function log(message) {
-    console.log(chalk.magentaBright(`[GameAPI] [${new Date().toLocaleString()}] ${message}`));
+    logMessage(LOG_LEVELS.FINE, "GameAPI", message);
 }
 
 async function get(url) {
-    return await (await fetch(API_BASE + url, {
+    return await (await fetch(encodeURI(API_BASE + url), {
         method: "GET",
         headers: {
-            "Authorization": "Bearer " + process.env.TOKEN
+            "Authorization": "Bearer " + process.env.TOKEN,
+            "User-Agent": UA
         }
     })).json();
 }
 
 async function getAuthed(url) {
-    return await (await fetch(AUTHED_BASE + url, {
+    return await (await fetch(encodeURI(AUTHED_BASE + url), {
         method: "GET",
         headers: {
-            "Authorization": "Bearer " + process.env.TOKEN
+            "Authorization": "Bearer " + process.env.TOKEN,
+            "User-Agent": UA
         }
     })).json();
 }
 
 async function postAuthed(url, body) {
-    return await (await fetch(AUTHED_BASE + url, {
+    return await (await fetch(encodeURI(AUTHED_BASE + url), {
         method: "POST",
         headers: {
             "Authorization": "Bearer " + process.env.TOKEN,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": UA
         },
         body: JSON.stringify(body)
     })).json();
 }
 
 async function getUser(id) {
+    if (!id || id.length === 0) return undefined;
+
+    const cachedResponse = await getCachedAPIResponse("users/" + id);
+
+    if (cachedResponse) {
+        log(`Retrieved CACHED user info for ${id}`);
+        return cachedResponse;
+    };
+
     const result = await get("users/" + id);
 
     if (result.success) {
         log(`Retrieved user info for ${id}`);
+        await storeCachedAPIResponse("users/" + id, result.data.user, 600);
         return result.data.user;
+    } else {
+        return undefined;
+    }
+}
+
+async function getNews(id) {
+    if (!id || id.length === 0) return undefined;
+
+    const cachedResponse = await getCachedAPIResponse("news/user_" + id);
+
+    if (cachedResponse) {
+        log(`Retrieved CACHED news info for ${id}`);
+        return cachedResponse;
+    };
+
+    const result = await get("news/user_" + id);
+
+    if (result.success) {
+        log(`Retrieved news info for ${id}`);
+        await storeCachedAPIResponse("news/user_" + id, result.data.news, 600);
+        return result.data.news;
+    } else {
+        return undefined;
+    }
+}
+
+async function getTLStream(id) {
+    if (!id || id.length === 0) return undefined;
+
+    const cachedResponse = await getCachedAPIResponse("streams/league_userrecent_" + id);
+
+    if (cachedResponse) {
+        log(`Retrieved CACHED league stream for ${id}`);
+        return cachedResponse;
+    };
+
+    const result = await get("streams/league_userrecent_" + id);
+
+    if (result.success) {
+        log(`Retrieved league stream for ${id}`);
+        await storeCachedAPIResponse("streams/league_userrecent_" + id, result.data.records, 600);
+        return result.data.records;
     } else {
         return undefined;
     }
@@ -91,4 +148,8 @@ async function unfriendUser(user) {
     return await postAuthed("relationships/remove", {user});
 }
 
-module.exports = {getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser};
+async function getLeaderboardSnapshot() {
+    return get("users/lists/league/all");
+}
+
+module.exports = {getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser, getLeaderboardSnapshot, getNews, getTLStream};

@@ -43,25 +43,40 @@ const CONFIG_TYPES = {
     "game.options.garbagecapmax": "number",
     "game.options.manual_allowed": "checkbox",
     "game.options.b2bchaining": "checkbox",
-    "game.options.clutch": "checkbox"
+    "game.options.clutch": "checkbox",
+    "game.options.passthrough": "checkbox"
 };
 
 // don't allow changes to allowAnonymous since that also blocks bots from (re)joining
 // also don't allow room name changes since we want to do that with !name
 const BLACKLISTED_CONFIGS = ["meta.allowAnonymous", "meta.name"];
 
-function parse(setString) {
+function parseSet(setString) {
     const settings = [];
 
-    const props = setString.trim().split(";");
+    const s = setString?.trim();
+
+    if (!s || s === "") {
+        return [];
+    }
+
+    const props = s.split(";");
 
     props.forEach(prop => {
         let [index, value] = prop.trim().split("=");
 
-        if (!CONFIG_TYPES.hasOwnProperty(index) || BLACKLISTED_CONFIGS.indexOf(index) !== -1) return; // ignore invalid props
+        if (!CONFIG_TYPES.hasOwnProperty(index) || BLACKLISTED_CONFIGS.indexOf(index) !== -1) {
+            throw new Error(`Invalid config option ${index}.`);
+        }
 
         if (CONFIG_TYPES[index] === "checkbox") {
             value = !(value === "false" || value === "0");
+        } else if (CONFIG_TYPES[index] === "number") {
+            if (isNaN(parseFloat(value))) {
+                throw new Error("Invalid numeric value for " + index + ".");
+            }
+
+            value = parseFloat(value).toString(); // be sneaky and unfuck any weirdness that parseFloat allows
         }
 
         settings.push({
@@ -72,4 +87,17 @@ function parse(setString) {
     return settings;
 }
 
-module.exports = parse;
+function gmupdateToUpdateconfig(config) {
+    const settings = [];
+
+    for (const index of Object.keys(CONFIG_TYPES)) {
+        if (BLACKLISTED_CONFIGS.indexOf(index) !== -1) continue;
+
+        const value = index.split(".").reduce((obj, i) => obj[i], config);
+        settings.push({index, value});
+    }
+
+    return settings;
+}
+
+module.exports = {parseSet, gmupdateToUpdateconfig};

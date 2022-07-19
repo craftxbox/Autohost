@@ -36,6 +36,10 @@ class Room extends EventEmitter {
         });
     }
 
+    get name() {
+        return this.settings.meta?.name;
+    }
+
     get isHost() {
         return this.settings.owner === botUserID;
     }
@@ -48,16 +52,20 @@ class Room extends EventEmitter {
         return this.settings.id;
     }
 
+    get isPrivate() {
+        return this.settings.type === "private";
+    }
+
     get players() {
-        return this.settings.players.filter(player => player.bracket === "player").map(player => player._id);
+        return this.settings.players?.filter(player => player.bracket === "player").map(player => player._id) || [];
     }
 
     get spectators() {
-        return this.settings.players.filter(player => player.bracket === "spectator").map(player => player._id);
+        return this.settings.players?.filter(player => player.bracket === "spectator").map(player => player._id) || [];
     }
 
     get memberCount() {
-        return this.settings.players.length;
+        return this.settings.players?.length || 0;
     }
 
     setRoomConfig(data) {
@@ -86,8 +94,16 @@ class Room extends EventEmitter {
         });
     }
 
-    kickPlayer(player) {
-        this.ribbon.sendMessage({command: "kick", data: player});
+    hasPlayer(id) {
+        return !!this.settings.players.find(player => player._id === id);
+    }
+
+    kickPlayer(player, duration) {
+        this.ribbon.sendMessage({command: "kick", data: {uid: player, duration}});
+    }
+
+    unbanPlayer(player) {
+        this.ribbon.sendMessage({command: "unban", data: player});
     }
 
     transferOwnership(player) {

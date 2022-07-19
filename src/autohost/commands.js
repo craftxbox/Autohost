@@ -1,10 +1,12 @@
-const presets = require("../data/presets");
-const parse = require("../ribbon/configparser");
+const {parseSet, gmupdateToUpdateconfig} = require("../ribbon/configparser");
 const {getBan} = require("../data/globalbans");
-const {checkAllLegacy} = require("./rules");
+const {checkAll} = require("./rules");
 const {getUser} = require("../gameapi/api");
-const {isDeveloper} = require("../data/developers");
 const {RULES} = require("./rules");
+const {PUNISHMENT_TYPES} = require("../data/enums");
+const {DBPreset} = require("../db/models");
+const {RANK_HIERARCHY} = require("../data/data");
+const {setRoomCode} = require("../ribbon/ribbonutil");
 
 const EIGHTBALL_RESPONSES = ["It is Certain.", "It is decidedly so.", "Without a doubt.", "Yes, definitely.", "You may rely on it.", "As I see it, yes.", "Most likely.", "Outlook good.", "Yes.", "Signs point to yes.", "Reply hazy, try again.", "Ask again later.", "Better not tell you now.", "Cannot predict now.", "Concentrate and ask again.", "Don't count on it.", "My reply is no.", "My sources say no.", "Outlook not so good.", "Very doubtful."];
 const RPS = ["rock", "paper", "scissors"];
@@ -29,6 +31,14 @@ const commands = {
                 autohost.sendMessage(username, "Usage: !8ball <question>");
                 return;
             }
+
+            const message = args.join(" ").toLowerCase();
+
+            if (message === "trans rights") {
+                autohost.sendMessage(username, "based");
+                return;
+            }
+
             autohost.sendMessage(username, EIGHTBALL_RESPONSES[Math.floor(Math.random() * EIGHTBALL_RESPONSES.length)]);
         }
     },
@@ -95,7 +105,7 @@ const commands = {
         modonly: true,
         devonly: false,
         needhost: true,
-        handler: async function (user, username, args, autohost) {
+        handler: async function (user, username, args, autohost, dev) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !kick <username>");
                 return;
@@ -127,17 +137,12 @@ const commands = {
                 return;
             }
 
-            if (isDeveloper(kickRecipient)) {
-                autohost.sendMessage(username, "Please don't kick the developer! They'll leave if you ask nicely...");
-                return;
-            }
-
             if (kickRecipient === autohost.host) {
                 autohost.sendMessage(username, "You can't kick the room host.");
                 return;
             }
 
-            if ([...autohost.moderatorUsers.values()].indexOf(kickRecipient) !== -1 && user !== autohost.host && !isDeveloper(user)) {
+            if ([...autohost.moderatorUsers.values()].indexOf(kickRecipient) !== -1 && user !== autohost.host && !dev) {
                 autohost.sendMessage(username, "Only the room host can kick moderators.");
                 return;
             }
@@ -160,7 +165,7 @@ const commands = {
         modonly: true,
         devonly: false,
         needhost: true,
-        handler: async function (user, username, args, autohost) {
+        handler: async function (user, username, args, autohost, dev) {
             if (args.length !== 1) {
                 autohost.sendMessage(username, "Usage: !ban <username>");
                 return;
@@ -191,34 +196,23 @@ const commands = {
                 return;
             }
 
-            if (isDeveloper(banRecipient)) {
-                autohost.sendMessage(username, "Please don't ban the developer! They'll leave if you ask nicely...");
-                return;
-            }
-
             if (banRecipient === autohost.host) {
                 autohost.sendMessage(username, "You can't ban the room host.");
                 return;
             }
 
-            if ([...autohost.moderatorUsers.values()].indexOf(banRecipient) !== -1 && user !== autohost.host && !isDeveloper(user)) {
+            if ([...autohost.moderatorUsers.values()].indexOf(banRecipient) !== -1 && user !== autohost.host && !dev) {
                 autohost.sendMessage(username, "Only the room host can ban moderators.");
                 return;
             }
 
             if (banRecipient !== user) {
-                autohost.banPlayer(banRecipient, args[0]);
-                autohost.ribbon.room.kickPlayer(banRecipient);
-                if (autohost.ribbon.room.settings.meta.allowAnonymous) {
-                    autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}. Note that banned players can rejoin with anonymous accounts.`);
-                } else {
-                    autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}.`);
-                }
+                autohost.ribbon.room.kickPlayer(banRecipient, 2592000000);
+                autohost.sendMessage(username, `Banned ${args[0].toUpperCase()}.`);
             } else {
                 autohost.sendMessage(username, "Why would you want to ban yourself?");
             }
 
-            autohost.saveConfig();
         }
     },
     start: {
@@ -235,15 +229,136 @@ const commands = {
         modonly: true,
         devonly: false,
         needhost: true,
-        handler: function (user, username, args, autohost) {
-            if (args.length !== 1 || !presets.hasOwnProperty(args[0].toLowerCase())) {
-                autohost.sendMessage(username, `Usage: !preset <${Object.keys(presets).join("|")}>`);
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                const presets = (await DBPreset.find({
+                    $or: [
+                        {global: true},
+                        {owner: user}
+                    ]
+                })).map(p => p.code);
+                autohost.sendMessage(username, `Usage: !preset <name>\n\nPresets: ${presets.join(", ")}`);
                 return;
             }
 
-            autohost.ribbon.room.setRoomConfig(presets[args[0].toLowerCase()]);
+            const preset = await DBPreset.findOne({
+                code: args[0].toLowerCase(),
+                $or: [
+                    {global: true},
+                    {owner: user}
+                ]
+            });
 
-            autohost.sendMessage(username, `Switched to ${args[0].toUpperCase()} preset.`);
+            if (preset) {
+                // unfuck old broken presets
+                for (const key in preset.config) {
+                    if (preset.config.hasOwnProperty(key)) {
+                        if (typeof preset.config[key].value === "boolean" || preset.config[key].value === "true" || preset.config[key].value === "false") {
+                            preset.config[key].value = preset.config[key].value.toString() === "true";
+                        } else {
+                            preset.config[key].value = preset.config[key].value.toString();
+                        }
+                    }
+                }
+                autohost.ribbon.room.setRoomConfig(preset.config);
+                autohost.sendMessage(username, `Loaded preset ${args[0].toLowerCase()}.`);
+            } else {
+                autohost.sendMessage(username, `Preset ${args[0].toLowerCase()} not found.`);
+            }
+        }
+    },
+    savepreset: {
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, `Usage: !savepreset <name>`);
+                return;
+            }
+
+            const config = gmupdateToUpdateconfig(autohost.ribbon.room.settings);
+
+            if (await DBPreset.findOne({code: args[0].toLowerCase(), global: true})) {
+                autohost.sendMessage(username, "That name is already in use by a global preset. Please choose another.");
+                return;
+            }
+
+            await DBPreset.replaceOne({
+                code: args[0].toLowerCase(),
+                global: false,
+                owner: user
+            }, {
+                code: args[0].toLowerCase(),
+                owner: user,
+                global: false,
+                config
+            }, {
+                upsert: true
+            });
+
+            autohost.sendMessage(username, `Preset ${args[0].toLowerCase()} updated.`);
+        }
+    },
+    delpreset: {
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, `Usage: !delpreset <name>`);
+                return;
+            }
+
+            const res = await DBPreset.deleteOne({
+                code: args[0],
+                owner: user,
+                global: false
+            });
+
+            if (res.deletedCount > 0) {
+                autohost.sendMessage(username, `Deleted preset ${args[0]}.`);
+            } else {
+                autohost.sendMessage(username, `Preset ${args[0].toLowerCase()} not found.`);
+            }
+        }
+    },
+    saveglobalpreset: {
+        devonly: true,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, `Usage: !saveglobalpreset <name>`);
+                return;
+            }
+
+            const config = gmupdateToUpdateconfig(autohost.ribbon.room.settings);
+
+            await DBPreset.replaceOne({
+                code: args[0].toLowerCase(),
+                global: true
+            }, {
+                code: args[0].toLowerCase(),
+                global: true,
+                config
+            }, {
+                upsert: true
+            });
+
+            autohost.sendMessage(username, `Global preset ${args[0].toLowerCase()} updated.`);
+        }
+    },
+    delglobalpreset: {
+        devonly: true,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, `Usage: !delglobalpreset <name>`);
+                return;
+            }
+
+            const res = await DBPreset.deleteOne({
+                code: args[0],
+                global: true
+            });
+
+            if (res.deletedCount > 0) {
+                autohost.sendMessage(username, `Deleted global preset ${args[0]}.`);
+            } else {
+                autohost.sendMessage(username, `Preset ${args[0].toLowerCase()} not found.`);
+            }
         }
     },
     rules: {
@@ -271,7 +386,18 @@ const commands = {
             const rule = RULES[args[0].toLowerCase()];
             let newvalue = args[1].toLowerCase();
 
-            if (rule.type instanceof Array && rule.type.indexOf(newvalue) === -1) {
+            if (rule.type === "rank") {
+                const tr = parseInt(newvalue);
+
+                if (!isNaN(tr) && tr >= 0 && tr <= 25000) {
+                    newvalue = tr;
+                } else if (RANK_HIERARCHY.indexOf(newvalue.toLowerCase()) !== -1) {
+                    newvalue = newvalue.toLowerCase();
+                } else {
+                    autohost.sendMessage(username, `${args[0].toLowerCase()} should be a rank letter (e.g. A, B+, SS) or a TR number between 0 and 25000.`);
+                    return;
+                }
+            } else if (rule.type instanceof Array && rule.type.indexOf(newvalue) === -1) {
                 autohost.sendMessage(username, `${args[0].toLowerCase()} should be one of: ${rule.type.join(", ")}`);
                 return;
             } else if (rule.type === Number) {
@@ -360,7 +486,7 @@ const commands = {
                 return;
             }
 
-            const ban = getBan(newHost, ["host"]);
+            const ban = await getBan(newHost, PUNISHMENT_TYPES.HOST_BLOCK);
 
             if (ban) {
                 autohost.sendMessage(username, "That player is not eligible to become the host.");
@@ -454,13 +580,8 @@ const commands = {
                 return;
             }
 
-            if (autohost.unbanPlayer(args[0])) {
-                autohost.sendMessage(username, `Unbanned player ${args[0].toUpperCase()}.`);
-            } else {
-                autohost.sendMessage(username, `That player is not banned, check the spelling and try again.`);
-            }
-
-            autohost.saveConfig();
+            autohost.ribbon.room.unbanPlayer(args[0]);
+            autohost.sendMessage(username, `Unbanned player ${args[0].toUpperCase()}.`);
         }
     },
     mod: {
@@ -481,12 +602,7 @@ const commands = {
                 return;
             }
 
-            if (isDeveloper(modRecipient)) {
-                autohost.sendMessage(username, "This player is the developer of Autohost, no need to mod them.")
-                return;
-            }
-
-            const ban = getBan(modRecipient, ["host"]);
+            const ban = await getBan(modRecipient, PUNISHMENT_TYPES.HOST_BLOCK);
 
             if (ban) {
                 autohost.sendMessage(username, "That player is not eligible to become a room moderator.");
@@ -598,9 +714,9 @@ const commands = {
                 return;
             }
 
-            const rulesMessage = checkAllLegacy(autohost.rules, await getUser(user), autohost);
+            const rulesMessage = (await checkAll(autohost.rules, await getUser(user), autohost)).message;
 
-            if (rulesMessage && [...autohost.allowedUsers.values()].indexOf(user) === -1) {
+            if (rulesMessage && !autohost.allowedUsers.has(user)) {
                 autohost.sendMessage(username, rulesMessage + ".");
                 return;
             }
@@ -672,9 +788,13 @@ const commands = {
                 return;
             }
 
-            const config = parse(args.join(" "));
-            autohost.ribbon.room.setRoomConfig(config);
-            autohost.sendMessage(username, "Room configuration updated.");
+            try {
+                const config = parseSet(args.join(" "));
+                autohost.ribbon.room.setRoomConfig(config);
+                autohost.sendMessage(username, "Room configuration updated.");
+            } catch (e) {
+                autohost.sendMessage(username, e.message);
+            }
         }
     },
     name: {
@@ -727,13 +847,6 @@ const commands = {
             }
 
             const allowRecipient = await autohost.getUserID(args[0]);
-
-            const ban = getBan(allowRecipient, ["participation", "participation-persist"]);
-
-            if (ban && ((autohost.persist && ban.type === "participation-persist") || ban.type === "participation")) {
-                autohost.sendMessage(username, "You cannot allow this player while they have an active participation ban.");
-                return
-            }
 
             autohost.allowPlayer(allowRecipient, args[0]);
 
@@ -813,7 +926,7 @@ const commands = {
             const profile = await getUser(user);
 
             if (!profile.supporter) {
-                autohost.sendMessage(username, "Only TETR.IO Supporters can change the room code. Please consider supporting osk by purchasing Supporter!");
+                autohost.sendMessage(username, "Only TETR.IO Supporters can change the room code. Please consider supporting the game by purchasing Supporter!");
                 return;
             }
 
@@ -823,8 +936,13 @@ const commands = {
             }
 
             const name = args[0].toUpperCase().replace(/[^A-Z0-9]/g).substring(0, 16);
-            autohost.ribbon.room.setRoomID(name);
-            autohost.sendMessage(username, "Room code updated.");
+
+            try {
+                await setRoomCode(autohost.ribbon, name);
+                autohost.sendMessage(username, "Room code updated.");
+            } catch (e) {
+                autohost.sendMessage(username, e);
+            }
         }
     },
     disband: {
@@ -865,6 +983,33 @@ const commands = {
             autohost.motdID = "defaultMOTD";
             autohost.sendMessage(username, "Join messages have been turned on.");
             autohost.saveConfig();
+        }
+    },
+    bacoozled: {
+        hostonly: false,
+        modonly: false,
+        devonly: false,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            const cab = [..."CABOOZLED"];
+            while (Math.random() < 0.8) {cab.push(cab[Math.floor(Math.random()*cab.length)])}
+            cab.sort(() => Math.random()-0.5);
+            autohost.sendMessage(username, cab.join(""));
+        }
+    },
+    sp: {
+        hostonly: false,
+        modonly: false,
+        devonly: true,
+        needhost: false,
+        handler: function (user, username, args, autohost) {
+            autohost.smurfProtection = !autohost.smurfProtection;
+
+            if (autohost.smurfProtection) {
+                autohost.sendMessage(username, "Smurf protection enabled.");
+            } else {
+                autohost.sendMessage(username, "Smurf protection disabled.");
+            }
         }
     }
 };

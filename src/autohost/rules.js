@@ -1,5 +1,6 @@
 const {getBan} = require("../data/globalbans");
-const RANK_HIERARCHY = ["d", "d+", "c-", "c", "c+", "b-", "b", "b+", "a-", "a", "a+", "s-", "s", "s+", "ss", "u", "x"];
+const {RANK_HIERARCHY} = require("../data/data");
+const {PUNISHMENT_TYPES} = require("../data/enums");
 
 function xpToLevel(xp) {
     return Math.pow(xp / 500, 0.6) + (xp / (5000 + Math.max(0, xp - 4000000) / 5000)) + 1;
@@ -10,7 +11,6 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
-            // check: option set AND user is anon
             return !value && user.role === "anon";
         },
         message() {
@@ -24,7 +24,6 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
-            // check: unrated NOT allowed AND *percentile* rank is unranked
             return !value && user.league.percentile_rank === "z";
         },
         message() {
@@ -38,7 +37,6 @@ const RULES = {
         type: Boolean,
         default: true,
         check(value, user) {
-            // check: rankless NOT allowed AND rank is unranked
             return !value && user.league.rank === "z";
         },
         message() {
@@ -49,38 +47,64 @@ const RULES = {
         }
     },
     max_rank: {
-        type: RANK_HIERARCHY,
+        type: "rank",
         default: "z",
         check(value, user) {
-            // check: option set AND user has a TR AND percentile rank > max
-            return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) > RANK_HIERARCHY.indexOf(value)
+            if (value !== "z" && user.league.percentile_rank !== "z") {
+                if (RANK_HIERARCHY.indexOf(value) !== -1) {
+                    return RANK_HIERARCHY.indexOf(user.league.percentile_rank) > RANK_HIERARCHY.indexOf(value);
+                } else {
+                    return Math.round(user.league.rating) > value;
+                }
+            }
+
+            return false;
         },
         message(value) {
-            return `Your TR is too high for this room (maximum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`
+            if (RANK_HIERARCHY.indexOf(value) !== -1) {
+                return `Your rank is too high for this room (maximum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`;
+            } else {
+                return `Your TR is too high for this room (maximum is ${value} TR)`;
+            }
         },
         description(value) {
             if (value === "z") {
                 return "Maximum rank: no limit";
-            } else {
+            } else if (RANK_HIERARCHY.indexOf(value) !== -1) {
                 return `Maximum rank: :rank${value.replace("+", "plus").replace("-", "minus")}:`;
+            } else {
+                return `Maximum rank: ${value} TR`;
             }
         }
     },
     min_rank: {
-        type: RANK_HIERARCHY,
+        type: "rank",
         default: "z",
         check(value, user) {
-            // check: option set AND user has a TR AND percentile rank < min
-            return value !== "z" && user.league.percentile_rank !== "z" && RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value)
+            if (value !== "z" && user.league.percentile_rank !== "z") {
+                if (RANK_HIERARCHY.indexOf(value) !== -1) {
+                    return RANK_HIERARCHY.indexOf(user.league.percentile_rank) < RANK_HIERARCHY.indexOf(value);
+                } else {
+                    return Math.round(user.league.rating) < value;
+                }
+            }
+
+            return false;
         },
         message(value) {
-            return `Your TR is too low for this room (minimum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`
+            if (RANK_HIERARCHY.indexOf(value) !== -1) {
+                return `Your rank is too low for this room (minimum is around :rank${value.replace("+", "plus").replace("-", "minus")}:)`;
+            } else {
+                return `Your TR is too low for this room (minimum is ${value} TR)`;
+            }
         },
         description(value) {
             if (value === "z") {
                 return "Minimum rank: no limit";
-            } else {
+            } else if (RANK_HIERARCHY.indexOf(value) !== -1) {
                 return `Minimum rank: :rank${value.replace("+", "plus").replace("-", "minus")}:`;
+            } else {
+                return `Minimum rank: ${value} TR`;
             }
         }
     },
@@ -88,7 +112,6 @@ const RULES = {
         type: Number,
         default: 0,
         check(value, user) {
-            // check: option set AND level < min
             return value !== 0 && xpToLevel(user.xp) < value;
         },
         message(value) {
@@ -125,20 +148,20 @@ const RULES = {
     }
 };
 
-function checkAll(ruleset, user, autohost) {
-    const ban = getBan(user._id, ["participation", "participation-persist"]);
+async function checkAll(ruleset, user, autohost) {
+    const ban = await getBan(user._id, PUNISHMENT_TYPES.PERSIST_BLOCK);
 
-    if (ban) {
-        if (autohost.persist && ban.type === "participation-persist") {
-            return {
-                rule: "globalban",
-                message: `You have been banned from participating in unattended Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`
-            }
-        } else if (ban.type === "participation") {
-            return {
-                rule: "globalban",
-                message: `You have been banned from participating in ALL Autohost lobbies until ${new Date(ban.expires).toDateString()} for the following reason: ${ban.reason}`
-            }
+    if (ban && autohost.persist) {
+        return {
+            rule: "globalban",
+            message: `You have been banned from participating in unattended Autohost lobbies such as this one - get in touch with the bot developer if you think this was done in error`
+        }
+    }
+
+    if (autohost.smurfProtection && await smurfProtection.isSuspectedSmurf(user._id)) {
+        return {
+            rule: "smurfprotection",
+            message: "Your account has been automatically flagged as suspicious, and as such you cannot play in this lobby right now. Please come back later, or find a different lobby to play in"
         }
     }
 
@@ -167,8 +190,4 @@ function checkAll(ruleset, user, autohost) {
     return {rule: undefined, message: undefined};
 }
 
-function checkAllLegacy(ruleset, user, autohost) {
-    return checkAll(ruleset, user, autohost).message;
-}
-
-module.exports = {checkAll, checkAllLegacy, RULES};
+module.exports = {checkAll, RULES};

@@ -3,6 +3,7 @@ const msgpack = require("msgpack-lite");
 const EventEmitter = require("events");
 const Room = require("./Room");
 const api = require("../gameapi/api");
+const {logMessage, LOG_LEVELS} = require("../log");
 
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
@@ -75,7 +76,7 @@ class Ribbon extends EventEmitter {
     constructor(token) {
         super();
 
-        this.lastEndpoint = RIBBON_ENDPOINT;
+        this.endpoint = RIBBON_ENDPOINT;
 
         this.token = token;
 
@@ -92,27 +93,24 @@ class Ribbon extends EventEmitter {
         this.lastSent = 0;
         this.lastReceived = -99;
 
+        this.lastPong = Date.now();
+
         api.getRibbonVersion().then(version => {
             this.version = version;
             return api.getRibbonEndpoint();
         }).then(endpoint => {
-            this.lastEndpoint = endpoint;
-            this.connect(endpoint);
+            this.endpoint = endpoint;
         }).catch(() => {
             this.log("Failed to get the ribbon endpoint, using the default instead");
-            this.connect(RIBBON_ENDPOINT);
+        }).finally(() => {
+            this.connect();
         });
     }
 
-    connect(endpoint) {
-        if (this.ws) { // switching endpoints?
-            this.migrating = true;
-            this.ws.close();
-        }
+    connect() {
+        logMessage(LOG_LEVELS.FINE, "Ribbon", "Connecting to " + this.endpoint);
 
-        this.log("Connecting to " + endpoint);
-
-        this.ws = new WebSocket(endpoint);
+        this.ws = new WebSocket(this.endpoint);
 
         this.ws.on("message", data => {
             const messages = ribbonDecode(new Uint8Array(data));
@@ -120,9 +118,10 @@ class Ribbon extends EventEmitter {
         });
 
         this.ws.on("open", () => {
-            this.log("WebSocket open");
+            logMessage(LOG_LEVELS.FINE, "Ribbon", "WebSocket open " + this.ws.url);
 
             this.open = true;
+
             if (this.resume_token) {
                 this.sendMessageImmediate({
                     command: "resume",
@@ -130,56 +129,54 @@ class Ribbon extends EventEmitter {
                     resumetoken: this.resume_token
                 });
                 this.sendMessageImmediate({command: "hello", packets: this.sendHistory});
-                this.migrating = false;
             } else {
                 this.sendMessageImmediate({command: "new"});
             }
 
             this.pingInterval = setInterval(() => {
                 if (this.ws.readyState !== 1) return;
+
+                if (Date.now() - this.lastPong > 30000) {
+                    logMessage(LOG_LEVELS.FINE, "Ribbon", "Pong timed out, disconnecting");
+                    this.ws.close(4001, "pong timeout");
+                }
+
                 this.ws.send(new Uint8Array([RIBBON_PREFIXES.PING_PONG, PING_PONG.PING]));
             }, 5000);
         });
 
-        this.ws.on("close", () => {
-            if (this.migrating) {
+        this.ws.on("close", (code, reason) => {
+            logMessage(LOG_LEVELS.FINE, "Ribbon", `WebSocket closed: ${code} (${reason})`);
+
+            if (this.migrateEndpoint) {
+                this.connect(this.migrateEndpoint);
                 return;
             }
 
-            this.log("WebSocket closed");
             this.ws.removeAllListeners();
             this.open = false;
             clearInterval(this.pingInterval);
 
             if (!this.dead) {
-                setTimeout(() => {
-                    this.connect(this.lastEndpoint);
-                }, 1000);
+                this.connect();
             }
         });
 
-        this.ws.on("error", () => {
-            this.log("WebSocket errored");
+        this.ws.on("error", err => {
+            logMessage(LOG_LEVELS.WARNING, "Ribbon", "Disconnecting due to WebSocket error: " + err.message);
             this.ws.removeAllListeners();
             this.open = false;
-            this.ws.close();
+            this.ws.close(1006, "WebSocket error");
 
             if (!this.dead) {
-                setTimeout(() => {
-                    this.connect(this.lastEndpoint);
-                }, 1000);
+                this.connect();
             }
         });
-    }
-
-    log(message) {
-        // console.log(`[${this.socket_id || "new ribbon"}/${this.room ? this.room.id : "no room"}] ${message}`);
-        this.emit("ah-log", message);
     }
 
     sendMessageImmediate(message) {
         if (process.env.DUMP_RIBBON) {
-            this.log("OUT " + JSON.stringify(message));
+            logMessage(LOG_LEVELS.ULTRAFINE, "RibbonOut", JSON.stringify(message));
         }
         this.ws.send(ribbonEncode(message));
     }
@@ -193,27 +190,27 @@ class Ribbon extends EventEmitter {
         }
     }
 
-    die() {
+    die(unrecoverable) {
+        unrecoverable = !!unrecoverable;
+
         if (this.dead) return;
 
         this.dead = true;
 
         if (this.ws) {
-            this.ws.close();
+            this.ws.close(1000, "die called");
         }
 
-        this.emit("dead");
+        this.emit("dead", unrecoverable);
     }
 
     disconnectGracefully() {
+        this.flushQueue();
         this.sendMessageImmediate({command: "die"});
         this.die();
     }
 
     sendMessage(message) {
-        if (process.env.DUMP_RIBBON) {
-            this.log("PUSH " + message.command);
-        }
         this.lastSent++;
         message.id = this.lastSent;
         this.sendQueue.push(message);
@@ -226,11 +223,10 @@ class Ribbon extends EventEmitter {
 
     handleMessageInternal(message) {
         if (message.command !== "pong" && process.env.DUMP_RIBBON) {
-            this.log("IN " + JSON.stringify(message));
+            logMessage(LOG_LEVELS.ULTRAFINE, "RibbonIn", JSON.stringify(message));
         }
 
         if (message.type === "Buffer") {
-            this.log("Encountered a Buffer message");
             const packet = Buffer.from(message.data);
             const message = ribbonDecode(packet);
             this.handleMessageInternal(message);
@@ -246,12 +242,17 @@ class Ribbon extends EventEmitter {
 
         switch (message.command) {
             case "kick":
-                this.log("Ribbon kicked! " + JSON.stringify(message));
-                this.emit("kick", message.data);
-                this.die();
+                if (message.data.reason === "BANNED") {
+                    logMessage(LOG_LEVELS.CRITICAL, "Ribbon", "Autohost is BANNED (or was kicked by staff) - check immediately!");
+                    this.die(true);
+                } else {
+                    logMessage(LOG_LEVELS.WARNING, "Ribbon", "Ribbon kicked (reason: " + message.data.reason + ")");
+                    this.emit("kick", message.data);
+                    this.die();
+                }
                 break;
             case "nope":
-                this.log("Ribbon noped out! " + JSON.stringify(message));
+                logMessage(LOG_LEVELS.ERROR, "Ribbon", "Ribbon noped out! This shouldn't happen.");
                 this.emit("nope", message.data);
                 this.die();
                 break;
@@ -283,18 +284,22 @@ class Ribbon extends EventEmitter {
             case "authorize":
                 if (message.data.success) {
                     this.authed = true;
+
                     this.emit("ready");
                 } else {
                     this.die();
+                    logMessage(LOG_LEVELS.ERROR, "Ribbon", "Failed to authorise ribbon.");
                     this.emit("error", "failed to authorise");
                 }
                 break;
             case "migrate":
-                this.connect(message.data.endpoint);
+                this.endpoint = message.data.endpoint;
+                this.ws.close(4003, "migrating");
                 this.emit("migrate", message.data);
                 break;
             case "pong":
-                break; // todo: we should do something with this eventually.
+                this.lastPong = Date.now();
+                break;
             default:
                 this.handleMessage(message);
         }
@@ -303,13 +308,16 @@ class Ribbon extends EventEmitter {
     handleMessage(message) {
         switch (message.command) {
             case "joinroom":
-                this.log("Joined room " + message.data);
-                this.room = new Room(this, {id: message.data});
+                logMessage(LOG_LEVELS.INFO, "Ribbon", "Joined a room with ID " + message.data.id);
+                this.room = new Room(this, {id: message.data.id});
                 break;
             case "chat":
                 const username = message.data.user.username;
                 const text = message.data.content;
-                this.log(`${username} says: ${text}`);
+                logMessage(LOG_LEVELS.FINE, "Ribbon", `[${username}] ${text}`, {
+                    user: message.data.user._id,
+                    room: this.room?.id
+                });
                 break;
         }
 

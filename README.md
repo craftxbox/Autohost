@@ -31,7 +31,7 @@ message on Discord (`! craftxbox#4738`)
 
 ## Want to support the project?
 
-**Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do. 
+**Please consider [supporting TETR.IO](https://tetr.io/#S:) instead** - osk deserves your money more than I do.  
 However, the original developer, Zudo has a [Ko-fi](https://ko-fi.com/zudobtw) if you would like to support his original work instead.
 
 ## Acknowledgements

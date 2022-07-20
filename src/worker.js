@@ -22,7 +22,9 @@ ipc.onReady = function () {
     getMe().then(async profile => {
         global.botUserID = profile._id;
 
-        discord = new DiscordBot(process.env.DISCORD_TOKEN, workerIndex, Math.min(cpus().length, 8));
+        if(process.env.DISCORD_ENABLED == "true") {
+            discord = new DiscordBot(process.env.DISCORD_TOKEN, workerIndex, Math.min(cpus().length, 8));
+        }
 
         await lsm.restoreSessions();
 

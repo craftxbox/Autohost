@@ -1,4 +1,5 @@
-const {logMessage} = require("./log");
+const {logMessage,LOG_LEVELS} = require("./log");
+const chalk = require("chalk");
 global.ipc = {};
 
 ipc._returnChannels = new Map();
@@ -90,6 +91,7 @@ ipc.onMessage("ipc.workerInfo", info => {
     global.workerIndex = info.index;
     global.workerName = info.name;
     global.isFirstWorker = info.first;
+    logMessage(LOG_LEVELS.FINE,"IPC","Worker Initialization.")
     ipc.onReady && ipc.onReady();
 });
 
@@ -110,7 +112,7 @@ module.exports = function (workers) {
             worker.process.send({
                 command: "ipc.workerInfo", data: {
                     index: workerIndex,
-                    name: WORKER_NAMES[workerIndex],
+                    name: chalk[Object.keys(require("ansi-styles").color)[workerIndex+1]](WORKER_NAMES[workerIndex]),
                     first: workerIndex === 0
                 }
             });

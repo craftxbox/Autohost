@@ -15,9 +15,37 @@ async function get(url) {
         method: "GET",
         headers: {
             "Authorization": "Bearer " + process.env.TOKEN,
-            "User-Agent": UA
+            "User-Agent": UA,
+            "Accept": "application/json"
         }
     })).json();
+}
+
+async function getSpool(spool,url) {
+    let response = await (await fetch(encodeURI("https://" + spool + "/spool"), {
+        method: "GET",
+        headers: {
+            "Authorization": "Bearer " + process.env.TOKEN,
+            "User-Agent": UA,
+            "Accept": "application/json"
+        }
+    })).arrayBuffer()
+    response = new Uint8Array(response)
+    let despool = {
+        version:            response[0],
+        load1:              response[2],
+        load5:              response[3],
+        load15:             response[4],
+        isOnline:           ((response[1] & 0b10000000) >> 7) == 1,
+        avoidDueToHighLoad: ((response[1] & 0b01000000) >> 6) == 1,
+        recentlyRestarted:  ((response[1] & 0b00100000) >> 5) == 1,
+        reserved1:          ((response[1] & 0b00010000) >> 4) == 1,
+        reserved2:          ((response[1] & 0b00001000) >> 3) == 1,
+        reserved3:          ((response[1] & 0b00000100) >> 2) == 1,
+        reserved4:          ((response[1] & 0b00000010) >> 1) == 1,
+        reserved5:          ((response[1] & 0b00000001) >> 0) == 1,
+    };
+    return despool;
 }
 
 async function getAuthed(url) {
@@ -25,7 +53,8 @@ async function getAuthed(url) {
         method: "GET",
         headers: {
             "Authorization": "Bearer " + process.env.TOKEN,
-            "User-Agent": UA
+            "User-Agent": UA,
+            "Accept": "application/json"
         }
     })).json();
 }
@@ -40,6 +69,11 @@ async function postAuthed(url, body) {
         },
         body: JSON.stringify(body)
     })).json();
+}
+
+async function getSpoolToken(){
+    log("Retrieving spool token");
+    return (await getAuthed("server/ribbon")).spools.token;
 }
 
 async function getUser(id) {
@@ -131,8 +165,16 @@ async function getRibbonEndpoint() {
     const result = await getAuthed("server/ribbon");
 
     if (result && result.success) {
-        log(`Retrieved recommended ribbon endpoint: ${result.endpoint}`)
-        return result.endpoint;
+        let despool;
+        for(var i of result.spools.spools) {
+            let spool = await getSpool(i.host)
+            if(spool.isOnline && !spool.avoidDueToHighLoad) {
+                despool = i;
+                break;
+            }
+        }
+        log(`Retrieved recommended ribbon endpoint: ${despool.host + result.endpoint}`);
+        return despool.host + result.endpoint;
     } else {
         throw new Error("Unable to find ribbon endpoint");
     }
@@ -152,4 +194,4 @@ async function getLeaderboardSnapshot() {
     return get("users/lists/league/all");
 }
 
-module.exports = {getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser, getLeaderboardSnapshot, getNews, getTLStream};
+module.exports = {getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser, getLeaderboardSnapshot, getNews, getTLStream, getSpoolToken};

@@ -28,7 +28,7 @@ class LocalSessionManager {
 
     _joinOrCreate(isPrivate, code) {
         return new Promise((resolve, reject) => {
-            const ribbon = new Ribbon(process.env.TOKEN);
+            const ribbon = new Ribbon();
 
             ribbon.once("joinroom", () => {
                 ribbon.room.takeOwnership();
@@ -66,6 +66,12 @@ class LocalSessionManager {
                     } else {
                         resolve(ribbon);
                     }
+                } else if(err === "only TETR.IO supporters can do this"){
+                    logMessage(LOG_LEVELS.WARNING, "LocalSessionManager", "Bot is not a supporter! Failed to set room ID. "+code);
+                    resolve(ribbon);
+                }
+                else {
+                    reject(err);
                 }
             });
 
@@ -76,6 +82,7 @@ class LocalSessionManager {
             ribbon.on("ready", () => {
                 ribbon.joinRoom(code);
             });
+
         });
     }
 
@@ -160,7 +167,7 @@ class LocalSessionManager {
     createSession(isPrivate, type, params) {
         return new Promise(resolve => {
             params = params || {};
-            const ribbon = new Ribbon(process.env.TOKEN);
+            const ribbon = new Ribbon();
 
             const sessionID = Date.now() + "." + Math.floor(Math.random() * 10000);
 
@@ -192,7 +199,7 @@ class LocalSessionManager {
         return new Promise((resolve, reject) => {
             if (!SESSION_TYPES.hasOwnProperty(data?.type)) return;
 
-            const ribbon = new Ribbon(process.env.TOKEN);
+            const ribbon = new Ribbon();
 
             ribbon.on("joinroom", () => {
                 const session = new SESSION_TYPES[data.type]({ribbon});
@@ -332,11 +339,12 @@ class LocalSessionManager {
 
     async createPersistLobbies() {
         for (const lobby of persistlobbies) {
+            logMessage(LOG_LEVELS.INFO, "LocalSessionManager", `Creating persist lobby ${lobby.name}`);
             const sessionID = Date.now() + "." + Math.floor(Math.random() * 10000);
 
             try {
-                const ribbon = await this._joinOrCreate(!!process.env.PERSIST_ROOMS_DISABLED, lobby.code);
-
+                const ribbon = await this._joinOrCreate(process.env.PERSIST_ROOMS_DISABLED == 1, lobby.code);
+                
                 const session = new Autohost({ribbon, host: botUserID, persistLobby: lobby.id});
 
                 session.persist = true;

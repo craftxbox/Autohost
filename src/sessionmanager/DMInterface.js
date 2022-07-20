@@ -47,7 +47,7 @@ class DMInterface {
     }
 
     connect() {
-        this.ribbon = new Ribbon(process.env.TOKEN);
+        this.ribbon = new Ribbon();
 
         this.ribbon.on("social.notification", notif => {
             if (notif.type === "friend") {

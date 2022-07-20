@@ -1,9 +1,13 @@
 const WebSocket = require("ws");
-const msgpack = require("msgpack-lite");
+const msgpackr = require("msgpackr");
 const EventEmitter = require("events");
 const Room = require("./Room");
 const api = require("../gameapi/api");
-const {logMessage, LOG_LEVELS} = require("../log");
+const { logMessage, LOG_LEVELS } = require("../log");
+
+const 
+    globalPackr = new msgpackr.Packr({bundleStrings:false}),
+    globalUnpackr = new msgpackr.Unpackr({bundleStrings:false});
 
 const RIBBON_ENDPOINT = "wss://tetr.io/ribbon";
 
@@ -19,66 +23,75 @@ const PING_PONG = {
     PONG: 0x0C
 };
 
-function ribbonDecode(packet) {
-    switch (packet[0]) {
-        case RIBBON_PREFIXES.STANDARD:
-            return [msgpack.decode(packet.slice(1))];
-        case RIBBON_PREFIXES.EXTRACTED_ID:
-            const message = msgpack.decode(packet.slice(5));
-            const view = new DataView(packet.buffer);
-            message.id = view.getUint32(1, false); // shove it back in
-            return [message];
-        case RIBBON_PREFIXES.BATCH:
-            const items = [];
-            const lengths = [];
-            const batchView = new DataView(packet.buffer);
+function ribbonDecode(packet, unpackr) {
+    try {
+        switch (packet[0]) {
+            case RIBBON_PREFIXES.STANDARD:
+                return unpackr.unpackMultiple(packet.slice(1));
+            case RIBBON_PREFIXES.EXTRACTED_ID:
+                const message = globalUnpackr.unpack(packet.slice(5));
+                const view = new DataView(packet.buffer);
+                message.id = view.getUint32(1, false); // shove it back in
+                return [message];
+            case RIBBON_PREFIXES.BATCH:
+                const items = [];
+                const lengths = [];
+                const batchView = new DataView(packet.buffer);
 
-            // Get the lengths
-            for (let i = 0; true; i++) {
-                const length = batchView.getUint32(1 + (i * 4), false);
-                if (length === 0) {
-                    // We've hit the end of the batch
-                    break;
+                // Get the lengths
+                for (let i = 0; true; i++) {
+                    const length = batchView.getUint32(1 + (i * 4), false);
+                    if (length === 0) {
+                        // We've hit the end of the batch
+                        break;
+                    }
+                    lengths.push(length);
                 }
-                lengths.push(length);
-            }
 
-            // Get the items at those lengths
-            let pointer = 0;
-            for (let i = 0; i < lengths.length; i++) {
-                items.push(packet.slice(1 + (lengths.length * 4) + 4 + pointer, 1 + (lengths.length * 4) + 4 + pointer + lengths[i]));
-                pointer += lengths[i];
-            }
+                // Get the items at those lengths
+                let pointer = 0;
+                for (let i = 0; i < lengths.length; i++) {
+                    items.push(packet.slice(1 + (lengths.length * 4) + 4 + pointer, 1 + (lengths.length * 4) + 4 + pointer + lengths[i]));
+                    pointer += lengths[i];
+                }
 
-            return [].concat(...items.map(item => ribbonDecode(item)));
-        case RIBBON_PREFIXES.PING_PONG:
-            if (packet[1] === PING_PONG.PONG) {
-                return [{command: "pong"}];
-            } else {
-                return [];
-            }
-        default: // wtf?
-            return [msgpack.decode(packet)]; // osk does this so i will too :woomy:
+                return [].concat(...items.map(item => ribbonDecode(item, unpackr)));
+            case RIBBON_PREFIXES.PING_PONG:
+                if (packet[1] === PING_PONG.PONG) {
+                    return [{ command: "pong" }];
+                } else {
+                    return [];
+                }
+            default: // wtf?
+                return [unpackr.unpack(packet)]; // osk does this so i will too :woomy:
+        }
+    } catch (e) {
+        logMessage(LOG_LEVELS.ERROR, "Ribbon", "Error decoding packet: " + e.message);
+        logMessage(LOG_LEVELS.ERROR, "Ribbon", JSON.stringify(packet));
+        return { error: true }
     }
 }
 
-function ribbonEncode(message) { // todo: perhaps we should actually follow tetrio.js implementation here?
-    const msgpacked = msgpack.encode(message);
+function ribbonEncode(message, packr) { // todo: perhaps we should actually follow tetrio.js implementation here?
+    const msgpacked = packr.encode(message);
     const packet = new Uint8Array(msgpacked.length + 1);
     packet.set([RIBBON_PREFIXES.STANDARD], 0);
     packet.set(msgpacked, 1);
+    if (msgpacked.length == 5) {
+        debugger;
+    }
 
     return packet;
 }
 
 class Ribbon extends EventEmitter {
 
-    constructor(token) {
+    constructor() {
         super();
 
         this.endpoint = RIBBON_ENDPOINT;
 
-        this.token = token;
+        this.token = "";
 
         this.dead = false;
         this.open = false;
@@ -100,24 +113,39 @@ class Ribbon extends EventEmitter {
             return api.getRibbonEndpoint();
         }).then(endpoint => {
             this.endpoint = endpoint;
-        }).catch(() => {
-            this.log("Failed to get the ribbon endpoint, using the default instead");
+        }).catch((e) => {
+            logMessage(LOG_LEVELS.CRITICAL, "Ribbon", "!!! Failed to get the ribbon endpoint !!!");
+            console.log(e)
         }).finally(() => {
             this.connect();
         });
     }
 
-    connect() {
+    async connect() {
         logMessage(LOG_LEVELS.FINE, "Ribbon", "Connecting to " + this.endpoint);
 
-        this.ws = new WebSocket(this.endpoint);
+        this.token = await api.getSpoolToken();
+        this.ws = new WebSocket("wss://" + this.endpoint, this.token);
 
         this.ws.on("message", data => {
-            const messages = ribbonDecode(new Uint8Array(data));
+            const messages = ribbonDecode(new Uint8Array(data), this.unpackr);
+            if (messages?.error) return;
             messages.forEach(msg => this.handleMessageInternal(msg));
         });
 
         this.ws.on("open", () => {
+
+            this.packr = new msgpackr.Packr({
+                bundleStrings: false,
+                sequential: true
+            });
+
+            this.unpackr = new msgpackr.Unpackr({
+                bundleStrings: false,
+                sequential: true,
+                structures: []
+            });
+
             logMessage(LOG_LEVELS.FINE, "Ribbon", "WebSocket open " + this.ws.url);
 
             this.open = true;
@@ -128,9 +156,9 @@ class Ribbon extends EventEmitter {
                     socketid: this.socket_id,
                     resumetoken: this.resume_token
                 });
-                this.sendMessageImmediate({command: "hello", packets: this.sendHistory});
+                this.sendMessageImmediate({ command: "hello", packets: this.sendHistory });
             } else {
-                this.sendMessageImmediate({command: "new"});
+                this.sendMessageImmediate({ command: "new" });
             }
 
             this.pingInterval = setInterval(() => {
@@ -178,7 +206,7 @@ class Ribbon extends EventEmitter {
         if (process.env.DUMP_RIBBON) {
             logMessage(LOG_LEVELS.ULTRAFINE, "RibbonOut", JSON.stringify(message));
         }
-        this.ws.send(ribbonEncode(message));
+        this.ws.send(ribbonEncode(message, this.packr));
     }
 
     flushQueue() {
@@ -206,7 +234,7 @@ class Ribbon extends EventEmitter {
 
     disconnectGracefully() {
         this.flushQueue();
-        this.sendMessageImmediate({command: "die"});
+        this.sendMessageImmediate({ command: "die" });
         this.die();
     }
 
@@ -228,7 +256,8 @@ class Ribbon extends EventEmitter {
 
         if (message.type === "Buffer") {
             const packet = Buffer.from(message.data);
-            const message = ribbonDecode(packet);
+            const message = ribbonDecode(packet, this.unpackr);
+            if (message?.error) return;
             this.handleMessageInternal(message);
         }
 
@@ -253,6 +282,7 @@ class Ribbon extends EventEmitter {
                 break;
             case "nope":
                 logMessage(LOG_LEVELS.ERROR, "Ribbon", "Ribbon noped out! This shouldn't happen.");
+                console.log(message)
                 this.emit("nope", message.data);
                 this.die();
                 break;
@@ -265,7 +295,7 @@ class Ribbon extends EventEmitter {
                         command: "authorize",
                         id: this.lastSent,
                         data: {
-                            token: this.token,
+                            token: process.env.TOKEN,
                             handling: {
                                 arr: 0,
                                 das: 0,
@@ -309,7 +339,7 @@ class Ribbon extends EventEmitter {
         switch (message.command) {
             case "joinroom":
                 logMessage(LOG_LEVELS.INFO, "Ribbon", "Joined a room with ID " + message.data.id);
-                this.room = new Room(this, {id: message.data.id});
+                this.room = new Room(this, { id: message.data.id });
                 break;
             case "chat":
                 const username = message.data.user.username;
@@ -325,31 +355,31 @@ class Ribbon extends EventEmitter {
     }
 
     createRoom(isPrivate) {
-        this.sendMessage({command: "createroom", data: isPrivate ? "private" : "public"});
+        this.sendMessage({ command: "createroom", data: isPrivate ? "private" : "public" });
     }
 
     joinRoom(code) {
-        this.sendMessage({command: "joinroom", data: code});
+        this.sendMessage({ command: "joinroom", data: code });
     }
 
     socialInvite(player) {
-        this.sendMessage({command: "social.invite", data: player});
+        this.sendMessage({ command: "social.invite", data: player });
     }
 
     sendDM(recipient, message) {
-        this.sendMessage({command: "social.dm", data: {recipient, msg: message}});
+        this.sendMessage({ command: "social.dm", data: { recipient, msg: message } });
     }
 
     ackDM(recipient) {
-        this.sendMessage({command: "social.relationships.ack", data: recipient});
+        this.sendMessage({ command: "social.relationships.ack", data: recipient });
     }
 
     sendChatMessage(message) {
-        this.sendMessage({command: "chat", data: message});
+        this.sendMessage({ command: "chat", data: message });
     }
 
     clearChat() {
-        this.sendMessage({command: "clearchat"});
+        this.sendMessage({ command: "clearchat" });
     }
 }
 

@@ -1,11 +1,7 @@
 const SERIALISE_TYPES = {
     "AUTOHOST": 0,
-<<<<<<< HEAD
-    "TOURNAMENT": 1
-=======
     "TOURNAMENT": 1,
     "STREAM": 2
->>>>>>> refs/rewritten/Merge-ZudoB-Autohost-into-master
 }
 
 const TWO_PLAYER_MODES = {
@@ -24,9 +20,6 @@ const TOURNAMENT_TYPES = {
     "ROUND_ROBIN": "round robin"
 };
 
-<<<<<<< HEAD
-module.exports = {SERIALISE_TYPES, TWO_PLAYER_MODES, APM_LIMIT_EXEMPTIONS, TOURNAMENT_TYPES};
-=======
 const TOURNAMENT_STATES = {
     "REGISTRATION": "registration", // pending check in, registration open
     "PENDING_CHECK_IN": "pending_check_in", // pending check in, registration closed
@@ -97,4 +90,3 @@ module.exports = {
     TOURNEY_LOG_TYPES,
     MATCH_STATES
 };
->>>>>>> refs/rewritten/Merge-ZudoB-Autohost-into-master

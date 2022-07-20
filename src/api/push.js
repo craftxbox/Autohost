@@ -3,11 +3,13 @@ const {DBNotification, DBSubscription} = require("../db/models");
 const {logMessage, LOG_LEVELS} = require("../log");
 const {queueAddTasks} = require("../redis/redis");
 
-webpush.setVapidDetails(
-    "https://autoho.st",
-    process.env.PUSH_PUBLIC_KEY,
-    process.env.PUSH_PRIVATE_KEY
-);
+if(process.env.VAPID_ENABLED == "true") {
+    webpush.setVapidDetails(
+        process.env.PUSH_HOST,
+        process.env.PUSH_PUBLIC_KEY,
+        process.env.PUSH_PRIVATE_KEY
+    );
+}
 
 async function pushNotification(user, payload) {
     await DBNotification.create({
@@ -25,14 +27,19 @@ async function pushNotification(user, payload) {
     const subscriptions = await DBSubscription.find({user});
 
     for (const subscription of subscriptions) {
-        webpush.sendNotification(subscription.sub, JSON.stringify(payload)).then(() => {
-            logMessage(LOG_LEVELS.FINE, "WebPush", "Delivered a web push notification for " + user);
-        }).catch(e => {
-            logMessage(LOG_LEVELS.FINE, "WebPush", `Failed to deliver a push notification for ${user} (${e.statusCode})`);
-            if (e.statusCode === 410 || e.statusCode === 404) {
-                subscription.remove();
-            }
-        });
+        if(process.env.VAPID_ENABLED != "true"){
+            logMessage(LOG_LEVELS.WARNING,"WebPush","A WebPush delivery was requested, but the WebPush functionality has been disabled!")
+            logMessage(LOG_LEVELS.FINE,"WebPush",JSON.stringify(subscription))
+        } else{
+            webpush.sendNotification(subscription.sub, JSON.stringify(payload)).then(() => {
+                logMessage(LOG_LEVELS.FINE, "WebPush", "Delivered a web push notification for " + user);
+            }).catch(e => {
+                logMessage(LOG_LEVELS.FINE, "WebPush", `Failed to deliver a push notification for ${user} (${e.statusCode})`);
+                if (e.statusCode === 410 || e.statusCode === 404) {
+                    subscription.remove();
+                }
+            });
+        }
     }
 }
 

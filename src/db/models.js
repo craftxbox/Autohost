@@ -383,7 +383,7 @@ mongoose.connect(process.env.MONGO_URI, {
     useCreateIndex: true,
     useFindAndModify: false
 }).then(() => {
-    console.log("MongoDB connected.");
+    //console.log("MongoDB connected.");
 }).catch(e => {
     console.error("Couldn't connect to MongoDB.", e);
     process.exit(1);

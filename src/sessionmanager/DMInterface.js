@@ -1,5 +1,6 @@
 const api = require("../gameapi/api");
 const Ribbon = require("../ribbon/Ribbon");
+const {DBUser} = require("../db/models");
 const {getBan} = require("../data/globalbans");
 const {PUNISHMENT_TYPES} = require("../data/enums");
 
@@ -28,6 +29,58 @@ async function lobbyCreationCommandHandler(isPrivate, ribbon, user) {
 
 
 const COMMANDS = {
+    async join(ribbon, user, args) {
+        
+        const dbProfile = await DBUser.findOne({tetrio_id: user});
+        const dev = dbProfile && dbProfile.roles.developer
+
+        if(!dev){
+            ribbon.sendDM(user, "Only Autohost's developer can use this command.");
+            return;
+        }
+        if (args.length === 0) {
+            ribbon.sendDM(user, "Usage: !join <room code>");
+            return;
+        }
+        ribbon.sendDM(user, "Okay.");
+        sessionManager.createSession(false, "Autohost", {host: user,_joinRoom:true,_joinCode:args[0].toUpperCase()}).then(({_id,err}) => {
+            ribbon.sendDM(user, "I tried, " + (_id ? _id : err));
+            if(_id) sessionManager.inviteToSession(_id, user);
+        })
+    },
+    async eval(ribbon, user, args) {
+        const dbProfile = await DBUser.findOne({tetrio_id: user});
+        const dev = dbProfile && dbProfile.roles.developer
+
+        if(!dev){
+            ribbon.sendDM(user, "Only Autohost's developer can use this command.");
+            return;
+        }
+        if (args.length === 0) {
+            ribbon.sendDM(user, "Usage: !eval <code>");
+            return;
+        }
+        try {
+            const result = eval(args.join(" "));
+            ribbon.sendDM(user, "Result: " + result);
+        } catch (e) {
+            ribbon.sendDM(user, "Error: " + e);
+        }
+    },
+    async xrc(ribbon, user, args) {
+        const dbProfile = await DBUser.findOne({tetrio_id: user});
+        const dev = dbProfile && dbProfile.roles.developer
+
+        if(!dev){
+            ribbon.sendDM(user, "Only Autohost's developer can use this command.");
+            return;
+        }
+        if (args.length === 0) {
+            ribbon.sendDM(user, "Usage: !xrc <room> <args...>");
+            return;
+        }
+        sessionManager.xrc(args[0], args.slice(1).join(" "))
+    },
     public(ribbon, user) {
         return lobbyCreationCommandHandler(false, ribbon, user);
     },

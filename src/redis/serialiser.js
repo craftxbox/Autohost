@@ -3,7 +3,7 @@ const TournamentAutohost = require("../tournaments/TournamentAutohost");
 const StreamedTournamentAutohost = require("../tournaments/StreamedTournamentAutohost");
 
 const FIELDS = {};
-FIELDS["Autohost"] = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime", "persistLobby", "apmLimitExemption", "smurfProtection"];
+FIELDS["Autohost"] = ["host", "bannedUsers", "moderatorUsers", "allowedUsers", "restrictedUsers", "twoPlayerMode", "twoPlayerChallenger", "twoPlayerOpponent", "twoPlayerQueue", "rules", "roomID", "isPrivate", "persist", "autostart", "persist", "motdID", "someoneDidJoin", "welcomedUsers", "creationTime", "persistLobby", "apmLimitExemption", "smurfProtection"];
 FIELDS["TournamentAutohost"] = ["tournamentID", "matchID", "player1", "player2", "player1ready", "player2ready", "player1disconnections", "player2disconnections", "spectatorsAllowed", "spectatorJoined", "matchStarted", "roomID"];
 FIELDS["StreamedTournamentAutohost"] = ["tournamentID", "roomID"];
 

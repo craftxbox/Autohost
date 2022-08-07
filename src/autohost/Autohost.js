@@ -42,8 +42,10 @@ class Autohost extends EventEmitter {
         this.usernamesToIds = new Map();
         /** moderators **/
         this.moderatorUsers = new Map();
-        /** users who were !allowed **/
+        /** users who were !allow'ed **/
         this.allowedUsers = new Map();
+        /** users who were !restrict'ed */
+        this.restrictedUsers = new Map();
 
         /** users who have already seen the motd **/
         this.welcomedUsers = new BloomFilter(8000, 10);
@@ -367,6 +369,11 @@ class Autohost extends EventEmitter {
             return;
         }
 
+        if ([...this.restrictedUsers.values()].indexOf(player) !== -1) {
+            // user cannot play
+            return "You have been restricted from playing in this lobby";
+        }
+
         return (await checkAll(this.rules, playerData, this)).message;
     }
 
@@ -509,6 +516,18 @@ class Autohost extends EventEmitter {
     unallowPlayer(username) {
         if (this.allowedUsers.has(username.toLowerCase())) {
             this.allowedUsers.delete(username.toLowerCase());
+            return true;
+        }
+        return false;
+    }
+
+    restrictPlayer(user, username) {
+        this.restrictedUsers.set(username.toLowerCase(), user);
+    }
+
+    unrestrictPlayer(username) {
+        if (this.restrictedUsers.has(username.toLowerCase())) {
+            this.restrictedUsers.delete(username.toLowerCase());
             return true;
         }
         return false;

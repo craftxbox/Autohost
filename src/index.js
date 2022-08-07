@@ -24,6 +24,10 @@ if (cluster.isPrimary) {
             console.error("Please specify a TETR.IO bot token in the TOKEN environment variable.");
             return process.exit(1);
         }
+    }).catch(e=>{
+        logMessage(LOG_LEVELS.CRITICAL, "GameAPI", "/!\\ FATAL: FAILED TO GET LOGIN /!\\", {error:e})
+        console.error(e);
+        setTimeout(()=>{process.exit(1)},2000);
     });
 }
 
@@ -32,8 +36,7 @@ const chalk = require("chalk");
 if (cluster.isPrimary) {
     // spin up workers
 
-    global.workerName = chalk.greenBright("primary")
-
+    global.workerName = "primary"
     const workers = [];
 
     for (let i = 0; i < Math.min(cpus().length, 8); i++) {

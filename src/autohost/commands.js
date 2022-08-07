@@ -1,7 +1,7 @@
 const {parseSet, gmupdateToUpdateconfig} = require("../ribbon/configparser");
 const {getBan} = require("../data/globalbans");
+const {getUser, getNews} = require("../gameapi/api");
 const {checkAll} = require("./rules");
-const {getUser} = require("../gameapi/api");
 const {RULES} = require("./rules");
 const {PUNISHMENT_TYPES} = require("../data/enums");
 const {DBPreset} = require("../db/models");
@@ -875,6 +875,47 @@ const commands = {
             autohost.saveConfig();
         }
     },
+    restrict:{
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        needhost: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !restrict <username>");
+                return;
+            }
+
+            const restrictRecipient = await autohost.getUserID(args[0]);
+
+            autohost.restrictPlayer(restrictRecipient, args[0]);
+
+            autohost.sendMessage(username, `${args[0].toUpperCase()} is now restricted from play.`);
+
+            autohost.saveConfig();
+        }
+    },
+    unrestrict: {
+        hostonly: false,
+        modonly: true,
+        devonly: false,
+        needhost: false,
+        handler: async function (user, username, args, autohost) {
+            if (args.length !== 1) {
+                autohost.sendMessage(username, "Usage: !unrestrict <username>");
+                return;
+            }
+
+            if (autohost.unrestrictPlayer(args[0])) {
+                autohost.sendMessage(username, `${args[0].toUpperCase()} is no longer restricted from play.`);
+            } else {
+                autohost.sendMessage(username, `That player is not on the restricted player list, check the spelling and try again.`);
+            }
+
+            autohost.saveConfig();
+        }
+    },
+
     queuelist: {
         hostonly: false,
         modonly: false,

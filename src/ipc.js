@@ -82,8 +82,7 @@ async function ipcMessageHandler(message, sender) {
             process.send(reply);
         }
     } else {
-        throw new Error("not handling an ipc message!");
-        // todo: ipc error of some sort
+        logMessage(LOG_LEVELS_ERROR, "No handler for ipc message!",{command:message.command,data:JSON.stringify(message.data)});
     }
 }
 
@@ -112,7 +111,7 @@ module.exports = function (workers) {
             worker.process.send({
                 command: "ipc.workerInfo", data: {
                     index: workerIndex,
-                    name: chalk[Object.keys(require("ansi-styles").color)[workerIndex+1]](WORKER_NAMES[workerIndex]),
+                    name: WORKER_NAMES[workerIndex],
                     first: workerIndex === 0
                 }
             });

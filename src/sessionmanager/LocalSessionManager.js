@@ -171,7 +171,7 @@ class LocalSessionManager {
 
             const sessionID = Date.now() + "." + Math.floor(Math.random() * 10000);
 
-            ribbon.on("joinroom", () => {
+            let joinRoom = () => {
                 params.ribbon = ribbon;
 
                 const session = new SESSION_TYPES[type](params);
@@ -184,13 +184,41 @@ class LocalSessionManager {
 
                 session.setup();
 
+                if(params._joinRoom){
+                    session.someoneDidJoin = true;
+                }
+
                 this._applyRibbonEvents(session, sessionID);
 
                 this.report();
-            });
+            };
+
+            ribbon.on("joinroom", joinRoom);
+            ribbon.on("joinroomsilent", joinRoom);
+
+            ribbon.on("err", data => {
+                if (data === "no such room") {
+                    resolve({_id:false,err:"no such room"});
+                    return;
+                }
+                if(data === "bots may not join this room"){
+                    resolve({_id:false,err:"bots may not join this room"});
+                    return;
+                }
+                if(data === "not a host of this room"){
+                    ribbon.sendChatMessage("Autohost doesn't have control of this room!");
+                    return;
+                }
+                logMessage(LOG_LEVELS.ERROR, "LocalSessionManager", `Unexpected ribbon error: ${data}`,{params: {type, params}});
+                resolve({_id:false,err:data});
+                return;
+            })
 
             ribbon.on("ready", () => {
-                ribbon.createRoom(isPrivate);
+                if(params._joinRoom) {
+                    ribbon.joinRoom(params._joinCode);
+                } else 
+                    ribbon.createRoom(isPrivate);
             });
         });
     }
@@ -214,6 +242,8 @@ class LocalSessionManager {
 
                 this.sessions.set(sessionID, session);
                 this.report();
+
+                ribbon.sendChatMessage("Autohost lost connection or was restarted! The room has been restored.")
 
                 resolve(this._sessionSerialise(session, sessionID));
             });

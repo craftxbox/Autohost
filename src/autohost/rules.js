@@ -1,4 +1,5 @@
 const {getBan} = require("../data/globalbans");
+const {getUser, getNews} = require("../gameapi/api");
 const {RANK_HIERARCHY} = require("../data/data");
 const {PUNISHMENT_TYPES} = require("../data/enums");
 
@@ -44,6 +45,29 @@ const RULES = {
         },
         description(value) {
             return `Rankless players allowed: ${value ? ":checked:" : ":crossed:"}`;
+        }
+    },
+    historical_max_rank:{
+        type: "rank",
+        default: "x",
+        check(value, user, autohost, news) {
+            news = news.filter(n => n.type === "rankup");
+
+            for (const entry of news) {
+                if (RANK_HIERARCHY.indexOf(entry.data.rank) > RANK_HIERARCHY.indexOf(value)) {
+                    return true;
+                }
+            }
+        },
+        message(value) {
+            return `Players whose rank has ever been higher than :rank${value.replace("+", "plus").replace("-", "minus")}: in the past cannot play in this room`;
+        }, 
+        description(value) {
+            if (value === "x") {
+                return "Maximum Historical rank: no limit";
+            } else if (RANK_HIERARCHY.indexOf(value) !== -1) {
+                return `Maximum Historical rank: :rank${value.replace("+", "plus").replace("-", "minus")}:`;
+            }
         }
     },
     max_rank: {
@@ -150,6 +174,7 @@ const RULES = {
 
 async function checkAll(ruleset, user, autohost) {
     const ban = await getBan(user._id, PUNISHMENT_TYPES.PERSIST_BLOCK);
+    const news = await getNews(user._id);
 
     if (ban && autohost.persist) {
         return {
@@ -178,7 +203,7 @@ async function checkAll(ruleset, user, autohost) {
                 value = defaultValue;
             }
 
-            if (check(value, user, autohost)) {
+            if (check(value, user, autohost, news)) {
                 return {
                     rule,
                     message: message(value)

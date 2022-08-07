@@ -3,7 +3,7 @@ const {APM_LIMIT_EXEMPTIONS} = require("../data/enums");
 module.exports = [
     {
         id: "rank_cap_ss",
-        name: "SS AND BELOW ONLY [CRAFTXBOT]",
+        name: "RANK SS AND BELOW ONLY [CRAFTXBOT]",
         code: process.env.NODE_ENV === "production" ? "CRXBHOSTSS" : "AHDEVSS",
         config: [{
             index: "meta.bgm",
@@ -24,7 +24,7 @@ module.exports = [
     },
     {
         id: "rank_cap_s",
-        name: "S AND BELOW ONLY [CRAFTXBOT]",
+        name: "RANK S AND BELOW ONLY [CRAFTXBOT]",
         code: process.env.NODE_ENV === "production" ? "CRXBHOSTS" : "AHDEVS",
         config: [{
             index: "meta.bgm",
@@ -45,7 +45,7 @@ module.exports = [
     },
     {
         id: "rank_cap_bplus",
-        name: "B+ AND BELOW ONLY [CRAFTXBOT]",
+        name: "RANK B+ AND BELOW ONLY [CRAFTXBOT]",
         code: process.env.NODE_ENV === "production" ? "CRXBHOSTBPLUS" : "AHDEVBPLUS",
         config: [{
             index: "meta.bgm",

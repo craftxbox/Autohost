@@ -1,6 +1,6 @@
 const fetch = require("node-fetch");
-const {logMessage, LOG_LEVELS} = require("../log");
-const {getCachedAPIResponse, storeCachedAPIResponse} = require("../redis/redis");
+const { logMessage, LOG_LEVELS } = require("../log");
+const { getCachedAPIResponse, storeCachedAPIResponse } = require("../redis/redis");
 
 const API_BASE = "https://ch.tetr.io/api/";
 const AUTHED_BASE = "https://tetr.io/api/";
@@ -21,7 +21,7 @@ async function get(url) {
     })).json();
 }
 
-async function getSpool(spool,url) {
+async function getSpool(spool, url) {
     let response = await (await fetch(encodeURI("https://" + spool + "/spool"), {
         method: "GET",
         headers: {
@@ -32,31 +32,45 @@ async function getSpool(spool,url) {
     })).arrayBuffer()
     response = new Uint8Array(response)
     let despool = {
-        version:            response[0],
-        load1:              response[2],
-        load5:              response[3],
-        load15:             response[4],
-        isOnline:           ((response[1] & 0b10000000) >> 7) == 1,
+        version: response[0],
+        load1: response[2],
+        load5: response[3],
+        load15: response[4],
+        isOnline: ((response[1] & 0b10000000) >> 7) == 1,
         avoidDueToHighLoad: ((response[1] & 0b01000000) >> 6) == 1,
-        recentlyRestarted:  ((response[1] & 0b00100000) >> 5) == 1,
-        reserved1:          ((response[1] & 0b00010000) >> 4) == 1,
-        reserved2:          ((response[1] & 0b00001000) >> 3) == 1,
-        reserved3:          ((response[1] & 0b00000100) >> 2) == 1,
-        reserved4:          ((response[1] & 0b00000010) >> 1) == 1,
-        reserved5:          ((response[1] & 0b00000001) >> 0) == 1,
+        recentlyRestarted: ((response[1] & 0b00100000) >> 5) == 1,
+        reserved1: ((response[1] & 0b00010000) >> 4) == 1,
+        reserved2: ((response[1] & 0b00001000) >> 3) == 1,
+        reserved3: ((response[1] & 0b00000100) >> 2) == 1,
+        reserved4: ((response[1] & 0b00000010) >> 1) == 1,
+        reserved5: ((response[1] & 0b00000001) >> 0) == 1,
     };
     return despool;
 }
 
 async function getAuthed(url) {
-    return await (await fetch(encodeURI(AUTHED_BASE + url), {
-        method: "GET",
-        headers: {
-            "Authorization": "Bearer " + process.env.TOKEN,
-            "User-Agent": UA,
-            "Accept": "application/json"
-        }
-    })).json();
+    let resp;
+    try {
+        resp = await fetch(encodeURI(AUTHED_BASE + url), {
+            method: "GET",
+            headers: {
+                "Authorization": "Bearer " + process.env.TOKEN,
+                "User-Agent": UA,
+                "Accept": "application/json"
+            }
+        })
+        resp = await resp.text()
+        return JSON.parse(resp);
+    } catch (e) {
+        logMessage(LOG_LEVELS.ERROR, "GameAPI", "Failed to get authed API response", {
+            url,
+            error: e.message,
+            response: resp ? JSON.stringify(resp) : undefined
+        });
+        console.error(resp?.substring(0,100));
+        throw e;
+        return null;
+    }
 }
 
 async function postAuthed(url, body) {
@@ -71,9 +85,14 @@ async function postAuthed(url, body) {
     })).json();
 }
 
-async function getSpoolToken(){
+async function getSpoolToken() {
     log("Retrieving spool token");
-    return (await getAuthed("server/ribbon")).spools.token;
+    let resp = await getAuthed("server/ribbon")
+    if(!resp.spools || !resp.spools.token){
+        logMessage(LOG_LEVELS.ERROR, "GameAPI", "Failed to retrieve spool token", resp);
+        return null;
+    }
+    return resp.spools.token;
 }
 
 async function getUser(id) {
@@ -82,7 +101,7 @@ async function getUser(id) {
     const cachedResponse = await getCachedAPIResponse("users/" + id);
 
     if (cachedResponse) {
-        log(`Retrieved CACHED user info for ${id}`);
+        //log(`Retrieved CACHED user info for ${id}`); 
         return cachedResponse;
     };
 
@@ -103,7 +122,7 @@ async function getNews(id) {
     const cachedResponse = await getCachedAPIResponse("news/user_" + id);
 
     if (cachedResponse) {
-        log(`Retrieved CACHED news info for ${id}`);
+        //log(`Retrieved CACHED news info for ${id}`);
         return cachedResponse;
     };
 
@@ -124,7 +143,7 @@ async function getTLStream(id) {
     const cachedResponse = await getCachedAPIResponse("streams/league_userrecent_" + id);
 
     if (cachedResponse) {
-        log(`Retrieved CACHED league stream for ${id}`);
+        //log(`Retrieved CACHED league stream for ${id}`);
         return cachedResponse;
     };
 
@@ -166,9 +185,9 @@ async function getRibbonEndpoint() {
 
     if (result && result.success) {
         let despool;
-        for(var i of result.spools.spools) {
+        for (var i of result.spools.spools) {
             let spool = await getSpool(i.host)
-            if(spool.isOnline && !spool.avoidDueToHighLoad) {
+            if (spool.isOnline && !spool.avoidDueToHighLoad) {
                 despool = i;
                 break;
             }
@@ -182,16 +201,16 @@ async function getRibbonEndpoint() {
 
 async function friendUser(user) {
     log(`Friending user ${user}`);
-    return await postAuthed("relationships/friend", {user});
+    return await postAuthed("relationships/friend", { user });
 }
 
 async function unfriendUser(user) {
     log(`Unfriending user ${user}`);
-    return await postAuthed("relationships/remove", {user});
+    return await postAuthed("relationships/remove", { user });
 }
 
 async function getLeaderboardSnapshot() {
     return get("users/lists/league/all");
 }
 
-module.exports = {getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser, getLeaderboardSnapshot, getNews, getTLStream, getSpoolToken};
+module.exports = { getUser, getMe, getRibbonVersion, getRibbonEndpoint, friendUser, unfriendUser, getLeaderboardSnapshot, getNews, getTLStream, getSpoolToken };

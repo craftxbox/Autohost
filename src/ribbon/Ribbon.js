@@ -112,7 +112,8 @@ class Ribbon extends EventEmitter {
             this.version = version;
             return api.getRibbonEndpoint();
         }).then(endpoint => {
-            this.endpoint = endpoint;
+            this.spool = endpoint.split("/ribbon")[0];
+            this.endpoint = "/ribbon" + endpoint.split("/ribbon")[1];
         }).catch((e) => {
             logMessage(LOG_LEVELS.CRITICAL, "Ribbon", "!!! Failed to get the ribbon endpoint !!!");
             console.log(e)
@@ -122,10 +123,10 @@ class Ribbon extends EventEmitter {
     }
 
     async connect() {
-        logMessage(LOG_LEVELS.FINE, "Ribbon", "Connecting to " + this.endpoint);
+        logMessage(LOG_LEVELS.FINE, "Ribbon", "Connecting to " + this.spool + this.endpoint);
 
         this.token = await api.getSpoolToken();
-        this.ws = new WebSocket("wss://" + this.endpoint, this.token);
+        this.ws = new WebSocket("wss://" + this.spool + this.endpoint, this.token);
 
         this.ws.on("message", data => {
             const messages = ribbonDecode(new Uint8Array(data), this.unpackr);

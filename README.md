@@ -26,7 +26,7 @@ Check out the [wiki](https://github.com/ZudoB/autohost/wiki) for guides on how t
 
 ## Found a bug?
 
-Please open an [issue](../../issues/new) or submit a pull request. Alternatively, send me a
+Please open an [issue](../../issues/new/choose) or submit a pull request. Alternatively, send me a
 message on Discord (`! craftxbox#4738`)
 
 ## Want to support the project?

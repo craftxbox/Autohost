@@ -378,10 +378,7 @@ const DBMatch = mongoose.model("Match", matchSchema);
 const DBDispute = mongoose.model("Dispute", disputeSchema);
 
 mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    useCreateIndex: true,
-    useFindAndModify: false
+
 }).then(() => {
     //console.log("MongoDB connected.");
 }).catch(e => {

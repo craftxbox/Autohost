@@ -4,10 +4,16 @@ module.exports = [
     {
         id: "rank_cap_ss",
         name: "RANK SS AND BELOW ONLY [CRAFTXBOT]",
-        code: process.env.NODE_ENV === "production" ? "CRXBHOSTSS" : "AHDEVSS",
+        code: (process.env.NODE_ENV || "").toLowerCase() === "production" ? "AUTOHOSTSS" : "AHDEVSS",
         config: [{
             index: "meta.bgm",
             value: "RANDOMbattle"
+        },{
+            index: "meta.userRankLimit",
+            value: "SS"
+        }, {
+            index: "meta.allowUnranked",
+            value: false
         }],
         options: {
             rules: {
@@ -25,10 +31,16 @@ module.exports = [
     {
         id: "rank_cap_s",
         name: "RANK S AND BELOW ONLY [CRAFTXBOT]",
-        code: process.env.NODE_ENV === "production" ? "CRXBHOSTS" : "AHDEVS",
+        code: (process.env.NODE_ENV || "").toLowerCase() === "production" ? "AUTOHOSTS" : "AHDEVS",
         config: [{
             index: "meta.bgm",
             value: "RANDOMbattle"
+        },{
+            index: "meta.userRankLimit",
+            value: "S"
+        }, {
+            index: "meta.allowUnranked",
+            value: false
         }],
         options: {
             rules: {
@@ -45,11 +57,17 @@ module.exports = [
     },
     {
         id: "rank_cap_bplus",
-        name: "RANK B+ AND BELOW ONLY [CRAFTXBOT]",
-        code: process.env.NODE_ENV === "production" ? "CRXBHOSTBPLUS" : "AHDEVBPLUS",
+        name: "NOOB ROOM [CRAFTXBOT]",
+        code: (process.env.NODE_ENV || "").toLowerCase() === "production" ? "AUTOHOSTBPLUS" : "AHDEVBPLUS",
         config: [{
             index: "meta.bgm",
             value: "RANDOMbattle"
+        },{
+            index: "meta.userRankLimit",
+            value: "b+"
+        }, {
+            index: "meta.allowUnranked",
+            value: false
         }],
         options: {
             rules: {

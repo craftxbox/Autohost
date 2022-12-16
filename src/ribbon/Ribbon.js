@@ -115,7 +115,7 @@ class Ribbon extends EventEmitter {
             this.spool = endpoint.split("/ribbon")[0];
             this.endpoint = "/ribbon" + endpoint.split("/ribbon")[1];
         }).catch((e) => {
-            logMessage(LOG_LEVELS.CRITICAL, "Ribbon", "!!! Failed to get the ribbon endpoint !!!");
+            logMessage(LOG_LEVELS.CRITICAL, "Ribbon", "!!! Failed to get the ribbon endpoint !!!",JSON.stringify(e));
             console.log(e)
         }).finally(() => {
             this.connect();

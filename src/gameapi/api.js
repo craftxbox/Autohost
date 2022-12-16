@@ -1,3 +1,4 @@
+const res = require("express/lib/response");
 const fetch = require("node-fetch");
 const { logMessage, LOG_LEVELS } = require("../log");
 const { getCachedAPIResponse, storeCachedAPIResponse } = require("../redis/redis");
@@ -89,7 +90,7 @@ async function getSpoolToken() {
     log("Retrieving spool token");
     let resp = await getAuthed("server/ribbon")
     if(!resp.spools || !resp.spools.token){
-        logMessage(LOG_LEVELS.ERROR, "GameAPI", "Failed to retrieve spool token", resp);
+        logMessage(LOG_LEVELS.ERROR, "GameAPI", "Failed to retrieve spool token.", resp);
         return null;
     }
     return resp.spools.token;
@@ -185,12 +186,20 @@ async function getRibbonEndpoint() {
 
     if (result && result.success) {
         let despool;
-        for (var i of result.spools.spools) {
-            let spool = await getSpool(i.host)
-            if (spool.isOnline && !spool.avoidDueToHighLoad) {
-                despool = i;
-                break;
+        try{
+            if(result.spools == null){
+                logMessage(LOG_LEVELS.WARNING,"GameAPI","Spool unavailable, Fallback to direct-ribbon.")
+                return "tetr.io" + result.endpoint;
             }
+            for (var i of result.spools.spools) {
+                let spool = await getSpool(i.host)
+                if (spool.isOnline && !spool.avoidDueToHighLoad) {
+                    despool = i;
+                    break;
+                }
+            }
+        } catch(e){
+            logMessage(LOG_LEVELS.CRITICAL,"GameAPI","!!! Failed to get the ribbon endpoint !!!", JSON.stringify(result))
         }
         log(`Retrieved recommended ribbon endpoint: ${despool.host + result.endpoint}`);
         return despool.host + result.endpoint;

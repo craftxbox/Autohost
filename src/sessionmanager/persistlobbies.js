@@ -10,7 +10,7 @@ module.exports = [
             value: "RANDOMbattle"
         },{
             index: "meta.userRankLimit",
-            value: "SS"
+            value: "ss"
         }, {
             index: "meta.allowUnranked",
             value: false
@@ -37,7 +37,7 @@ module.exports = [
             value: "RANDOMbattle"
         },{
             index: "meta.userRankLimit",
-            value: "S"
+            value: "s"
         }, {
             index: "meta.allowUnranked",
             value: false
